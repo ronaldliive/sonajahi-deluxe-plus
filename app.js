@@ -222,7 +222,7 @@
   const wrongCount = EL('#wrong-count');
   const coinCount = EL('#coin-count');
   const stickerCount = EL('#sticker-count');
-  const progress = EL('#progress');
+  const progress = null; // progress bar removed
   const feedback = EL('#feedback');
   const dots = EL('#dots');
   const pillCorrect = EL('#pill-correct');
@@ -624,7 +624,7 @@
     if(wrongCount) wrongCount.textContent = wrong;
     coinCount.textContent = coins;
     stickerCount.textContent = stickers;
-    progress.style.setProperty('--p', `${Math.min((taskIndex/sessionLen())*100,100)}%`);
+    // progress removed
     if(feedback){ feedback.className = 'feedback'; feedback.textContent = 'Vali õige pilt!'; }
   }
 
@@ -686,7 +686,7 @@
 
   function levelComplete(){
     toast(`Tase ${levelIndex+1} läbitud! Õigeid: ${correct}/${sessionLen()}`);
-    progress.style.setProperty('--p', '100%');
+    // progress removed
     // Järgmine tase kui on
     if(levelIndex < LEVELS.length-1){
       levelIndex++;
