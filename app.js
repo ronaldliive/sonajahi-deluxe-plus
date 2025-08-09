@@ -30,7 +30,6 @@
       { word: 'ÕUN', emojis: ['🍎','🍒','🍓'], answer: 0 },
       { word: 'PIRN', emojis: ['🍐','🍋','🍏'], answer: 0 },
       { word: 'KOKK', emojis: ['👨‍🍳','👨‍⚕️','👮‍♂️'], answer: 0 },
-      { word: 'RATASTOOL', emojis: ['♿','🚲','🛴'], answer: 0 },
       { word: 'KIRVES', emojis: ['🪓','🔧','🔨'], answer: 0 },
       { word: 'RAHA', emojis: ['💰','🧯','🔔'], answer: 0 }
     ],
@@ -381,15 +380,21 @@
     try{
       const container = letters;
       if(!container) return;
-      // reset scale first
+      // reset transform and gap
       container.style.transform = 'scale(1)';
       container.style.transformOrigin = 'center center';
-      // compute required scale
-      const avail = container.parentElement ? container.parentElement.clientWidth - 24 : container.clientWidth;
-      const needed = container.scrollWidth;
-      if(needed > 0 && avail > 0){
-        const scale = Math.max(0.6, Math.min(1, avail / needed));
-        container.style.transform = `scale(${scale})`;
+      // Try progressively tighter gaps if needed
+      const gapOptions = ['16px','12px','8px','6px','4px','2px'];
+      for(const gap of gapOptions){
+        container.style.gap = gap;
+        const avail = container.parentElement ? container.parentElement.clientWidth - 24 : container.clientWidth;
+        const needed = container.scrollWidth;
+        if(needed > 0 && avail > 0){
+          const scale = Math.max(0.35, Math.min(1, avail / needed));
+          container.style.transform = `scale(${scale})`;
+          // if it fits without hitting min scale and not overflowing, stop early
+          if(scale > 0.36 && needed * scale <= avail) break;
+        }
       }
     }catch(e){ /* no-op */ }
   }
