@@ -469,7 +469,9 @@
 
   function buildChoicesForTask(t){
     try{
-      const correct = canonicalEmojiForWord(t.word, (t.emojis && t.emojis[0]) || '⭐');
+      // Only use canonical mapping; if missing, abort to avoid placeholder icons
+      const correct = canonicalEmojiForWord(t.word, null);
+      if(!correct) return [];
       const cat = EMOJI_CATEGORY.get(correct) || 'object';
       const distractors = randomFromCategories(cat, 2).filter(d => d !== correct);
       while(distractors.length < 2){
@@ -480,7 +482,7 @@
       return [correct, ...distractors];
     }catch(e){
       // Fallback to provided task emojis if something goes wrong
-      return (t.emojis && t.emojis.slice(0,3)) || [];
+      return [];
     }
   }
 
@@ -490,8 +492,15 @@
       finishLevel();
       return;
     }
-    const t = pickTask();
+    let t = pickTask();
     if(t && t.word){ seenWords.add((t.word||'').toUpperCase()); }
+    // If task unsuitable for word-choice round (no emoji), advance until suitable or done
+    let guard = 0;
+    while(t && !canonicalEmojiForWord(t.word, null) && guard < 3){
+      taskIndex++;
+      t = pickTask();
+      guard++;
+    }
     if(!t){
       showGameOver();
       return;
