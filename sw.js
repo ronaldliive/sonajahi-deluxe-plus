@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sonajahi-cache-v3';
+const CACHE_NAME = 'sonajahi-cache-v4';
 const ASSETS = [
   './',
   './index.html',
@@ -30,10 +30,27 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
+
+  // Network-first for HTML navigations to avoid stale index.html
+  const isHTML = req.mode === 'navigate' || (req.headers.get('accept')||'').includes('text/html');
+  if (isHTML) {
+    e.respondWith(
+      fetch(req)
+        .then(res => {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
+          return res;
+        })
+        .catch(() => caches.match(req))
+    );
+    return;
+  }
+
+  // Cache-first for other GETs with background update
   e.respondWith(
     caches.match(req).then(cached => {
       const fetchPromise = fetch(req).then(res => {
-        if(res && res.status === 200 && res.type === 'basic'){
+        if (res && res.status === 200 && (res.type === 'basic' || res.type === 'cors')) {
           const copy = res.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
         }
