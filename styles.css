@@ -108,23 +108,22 @@ h1{ font-size:20px; margin:0 0 8px }
   .feedback{ margin:6px 12px 2px; font-size:14px }
   .letters{ gap:10px; margin:12px 0 6px }
   .letter{ width:clamp(48px, 12.5vw, 72px); height:clamp(48px, 12.5vw, 72px); min-width:clamp(48px, 12.5vw, 72px); font-size:clamp(24px, 5.8vw, 34px) }
-  .choice .emoji{ font-size:clamp(64px, 13.5vw, 108px) !important; line-height:1 }
-  .choices{ flex:1; display:flex !important; flex-direction:column; gap:8px; margin-top:0; padding-top:2px; border-top:1px solid #1f2937 }
-  .choice{ flex:1 1 0; min-height:0 !important; padding:12px }
+  /* Keep choices as a 3-column grid on mobile as well */
+  .choices{ flex:1; display:grid !important; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:0; padding-top:2px; border-top:1px solid #1f2937 }
+  .choice{ min-height:auto !important; padding:12px }
 }
 
 /* Choices */
-.choices{ display:grid; grid-template-columns:1fr; gap:12px; margin-top:12px; padding-top:12px; border-top:1px solid #1f2937 }
-@media (min-width:520px){ .choices{ grid-template-columns: repeat(3,1fr) } }
+.choices{ display:grid; grid-template-columns: repeat(3,1fr); gap:10px; margin-top:12px; padding-top:12px; border-top:1px solid #1f2937 }
 .choice{ min-height:84px }
 .choice{
   display:flex; align-items:center; justify-content:center; gap:10px; border:1px solid #1f2937; background:var(--tile);
-  border-radius:14px; padding:18px; min-height:100px; cursor:pointer; transition:transform .06s ease, border-color .2s ease, background .2s ease;
+  border-radius:14px; padding:14px; min-height:84px; cursor:pointer; transition:transform .06s ease, border-color .2s ease, background .2s ease;
 }
 .choice.enter{ opacity:0; transform:translateY(10px) scale(.98) }
 .choice.enter.show{ opacity:1; transform:translateY(0) scale(1); transition:transform .22s cubic-bezier(.2,.8,.2,1), opacity .22s ease }
 .choice:active{ transform:scale(.98) }
-.choice .emoji{ font-size:44px }
+.choice .emoji{ font-size:36px; line-height:1 }
 .choice.correct{ outline:2px solid #16a34a; border-color:#16a34a44; background:linear-gradient(0deg,rgba(34,197,94,.08),transparent) }
 .choice.wrong{ outline:2px solid #ef4444; border-color:#ef444444; background:linear-gradient(0deg,rgba(239,68,68,.08),transparent) }
 
@@ -142,7 +141,7 @@ h1{ font-size:20px; margin:0 0 8px }
 /* Level choices - emoji buttons */
 .level-choices{ display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin:8px 0 12px }
 .level-btn{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:14px; border-radius:16px; background:#0b1220; border:2px solid #1f2937; color:#e5e7eb; font-weight:800; min-width:0 }
-.level-btn .lvl-emoji{ font-size:44px; line-height:1 }
+.level-btn .lvl-emoji{ font-size:36px; line-height:1 }
 .level-btn .lvl-text{ font-size:13px; opacity:.9 }
 .level-btn.selected{ border-color:#60a5fa; box-shadow:0 0 0 3px rgba(96,165,250,.2) inset }
 .level-btn:active{ transform:scale(.98) }
