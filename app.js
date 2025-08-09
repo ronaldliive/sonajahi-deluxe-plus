@@ -1,0 +1,662 @@
+/* Sõnajahi Seiklus – Mobile-first reading trainer */
+(function(){
+  'use strict';
+  const EL = sel => document.querySelector(sel);
+  const ELS = sel => Array.from(document.querySelectorAll(sel));
+
+  // State
+  // --- Levels (5) from easy to hard ---
+  const LEVELS = [
+    // Level 1: väga lihtne, lühikesed sõnad, selged emotikonid
+    [
+      { word: 'KOOK', emojis: ['🍰','🔔','☀️'], answer: 0 },
+      { word: 'KASS', emojis: ['🐱','🐶','🌧️'], answer: 0 },
+      { word: 'KOER', emojis: ['🐶','🐱','🐭'], answer: 0 },
+      { word: 'AUTO', emojis: ['🚗','🍎','🐟'], answer: 0 },
+      { word: 'BUSS', emojis: ['🚌','🚲','🚂'], answer: 0 },
+      { word: 'PALL', emojis: ['🏀','🧸','🧃'], answer: 0 },
+      { word: 'NUKK', emojis: ['🧸','🎲','🎈'], answer: 0 },
+      { word: 'LILL', emojis: ['🌸','🌧️','🌙'], answer: 0 },
+      { word: 'LEHT', emojis: ['🍃','🌵','🌲'], answer: 0 },
+      { word: 'KALA', emojis: ['🐟','🍇','🌳'], answer: 0 },
+      { word: 'PÄIKE', emojis: ['☀️','🌙','🌧️'], answer: 0 },
+      { word: 'KUU', emojis: ['🌙','☁️','⭐'], answer: 0 },
+      { word: 'TÄHT', emojis: ['⭐','⚡','💥'], answer: 0 },
+      { word: 'MAJA', emojis: ['🏠','🚲','🍭'], answer: 0 },
+      { word: 'PUU', emojis: ['🌳','🌵','🍀'], answer: 0 },
+      { word: 'MUNA', emojis: ['🥚','🍎','🧀'], answer: 0 },
+      { word: 'LEHM', emojis: ['🐮','🐭','🐔'], answer: 0 }
+    ],
+    // Level 2: diakriitikutega ja tuttavad asjad (edasijõudnu)
+    [
+      { word: 'LUMI', emojis: ['❄️','🔥','🌊'], answer: 0 },
+      { word: 'SÜDA', emojis: ['❤️','💙','💛'], answer: 0 },
+      { word: 'PÄHKEL', emojis: ['🌰','🥜','🍞'], answer: 0 },
+      { word: 'LEIB', emojis: ['🥖','🥐','🥞'], answer: 0 },
+      { word: 'JÄÄ', emojis: ['🧊','🔥','🧵'], answer: 0 },
+      { word: 'RAAMAT', emojis: ['📖','📕','📗'], answer: 0 },
+      { word: 'KING', emojis: ['👟','🧦','👒'], answer: 0 },
+      { word: 'KINDAD', emojis: ['🧤','🧦','🧣'], answer: 0 },
+      { word: 'MÜTS', emojis: ['🧢','🧣','👓'], answer: 0 },
+      { word: 'SUKK', emojis: ['🧦','🧤','👟'], answer: 0 },
+      { word: 'KOHV', emojis: ['☕','🥛','🍵'], answer: 0 },
+      { word: 'TEE', emojis: ['🍵','🥛','🍺'], answer: 0 },
+      { word: 'VAARIKAS', emojis: ['🍓','🍒','🍅'], answer: 0 },
+      { word: 'MUSTIKAS', emojis: ['🫐','🍇','🍏'], answer: 0 },
+      { word: 'ÕUN', emojis: ['🍎','🍒','🍓'], answer: 0 },
+      { word: 'PIRN', emojis: ['🍐','🍋','🍏'], answer: 0 },
+      { word: 'KIRSS', emojis: ['🍒','🍓','🍎'], answer: 0 }
+    ],
+    // Level 3: pikemad või segadust tekitavad paarid (ekspert)
+    [
+      { word: 'ARBUUS', emojis: ['🍉','🍏','🍇'], answer: 0 },
+      { word: 'PORGAND', emojis: ['🥕','🌽','🍞'], answer: 0 },
+      { word: 'KURK', emojis: ['🥒','🥬','🌽'], answer: 0 },
+      { word: 'MAASIKAS', emojis: ['🍓','🍒','🍎'], answer: 0 },
+      { word: 'MELON', emojis: ['🍈','🍏','🍐'], answer: 0 },
+      { word: 'DRAAKON', emojis: ['🐉','🐲','🦖'], answer: 0 },
+      { word: 'RONG', emojis: ['🚆','🚗','🚲'], answer: 0 },
+      { word: 'LENDUR', emojis: ['👨‍✈️','👷','👨‍🍳'], answer: 0 },
+      { word: 'KELL', emojis: ['⏰','🧭','⌛'], answer: 0 },
+      { word: 'LIBLIKAS', emojis: ['🦋','🐝','🐞'], answer: 0 },
+      { word: 'JÄNES', emojis: ['🐰','🐹','🐭'], answer: 0 },
+      { word: 'AHV', emojis: ['🐵','🦁','🐯'], answer: 0 },
+      { word: 'SIIL', emojis: ['🦔','🐷','🐭'], answer: 0 },
+      { word: 'ELEKTER', emojis: ['⚡','💡','🔌'], answer: 0 },
+      { word: 'TELEFON', emojis: ['📱','📞','📟'], answer: 0 },
+      { word: 'LAEV', emojis: ['🚢','⛵','🛶'], answer: 0 }
+    ],
+    // Level 4: loomad/objektid sarnaste segajatega
+    [
+      { word: 'JÄNES', emojis: ['🐰','🐹','🐭'], answer: 0 },
+      { word: 'AHV', emojis: ['🐵','🦁','🐯'], answer: 0 },
+      { word: 'RONG', emojis: ['🚆','🚗','🚲'], answer: 0 },
+      { word: 'LENDUR', emojis: ['👨‍✈️','👷','👨‍🍳'], answer: 0 },
+      { word: 'KELL', emojis: ['⏰','🧭','⌛'], answer: 0 },
+    ],
+    // Level 5: pikemad ja harvemad sõnad
+    [
+      { word: 'LIBLIKAS', emojis: ['🦋','🐝','🐞'], answer: 0 },
+      { word: 'DRAAKON', emojis: ['🐉','🐲','🦖'], answer: 0 },
+      { word: 'ELEKTER', emojis: ['⚡','💡','🔌'], answer: 0 },
+      { word: 'LAEVAL', emojis: ['🚢','⛵','🛶'], answer: 0 },
+      { word: 'TELEFON', emojis: ['📱','📞','📟'], answer: 0 },
+    ],
+  ];
+
+  // Per-level rewards
+  const REWARDS = [
+    { icon: '⭐', text: 'Kuldne täht' },
+    { icon: '🎖️', text: 'Vapra mängija medal' },
+    { icon: '🏅', text: 'Meistri märk' },
+    { icon: '🏆', text: 'Võidukarikas' },
+    { icon: '👑', text: 'Kuninglik kroon' },
+  ];
+
+  let taskIndex = 0, correct = 0, wrong = 0, coins = 0, stickers = 0;
+  let currentTask = null; // holds the active task so TTS can use the exact word
+  let results = []; // per-task result: true/false/null
+  let levelIndex = 0; // 0..4
+  let currentOrder = [];
+
+  // Elements
+  const tasksCount = EL('#tasks-count');
+  const tasksTotal = EL('#tasks-total');
+  const correctCount = EL('#correct-count');
+  const wrongCount = EL('#wrong-count');
+  const coinCount = EL('#coin-count');
+  const stickerCount = EL('#sticker-count');
+  const progress = EL('#progress');
+  const feedback = EL('#feedback');
+  const dots = EL('#dots');
+  const pillCorrect = EL('#pill-correct');
+  const pillWrong = EL('#pill-wrong');
+  const letters = EL('#letters');
+  const choices = EL('#choices');
+  const btnSkip = EL('#btn-skip');
+  const btnNew = EL('#btn-new');
+  const btnSay = EL('#btn-say');
+  const welcome = EL('#welcome');
+  const btnStart = EL('#btn-start');
+  const btnGreet = EL('#btn-greet');
+
+  function sessionLen(){ return currentOrder.length || LEVELS[levelIndex].length; }
+  tasksTotal.textContent = sessionLen();
+
+  function toast(msg){
+    let t = EL('.toast');
+    if(!t){ t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); }
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(()=> t.classList.remove('show'), 900);
+  }
+
+  function playBuzz(){
+    try{
+      if(!audioCtx){ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+      const now = audioCtx.currentTime;
+      const g = audioCtx.createGain();
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.exponentialRampToValueAtTime(0.18, now + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+      g.connect(audioCtx.destination);
+      const o = audioCtx.createOscillator();
+      o.type = 'square';
+      o.frequency.setValueAtTime(220, now);
+      o.frequency.setValueAtTime(180, now + 0.12);
+      o.connect(g);
+      o.start(now);
+      o.stop(now + 0.25);
+    }catch(e){ /* ignore */ }
+  }
+
+  // --- Chime sound for correct answer ---
+  let audioCtx = null;
+  function playChime(){
+    try{
+      if(!audioCtx){ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+      const now = audioCtx.currentTime;
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.2, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+      gain.connect(audioCtx.destination);
+
+      const o1 = audioCtx.createOscillator();
+      o1.type = 'sine';
+      o1.frequency.setValueAtTime(880, now); // A5
+      o1.frequency.linearRampToValueAtTime(988, now + 0.18); // B5 glide
+      o1.connect(gain);
+      o1.start(now);
+      o1.stop(now + 0.35);
+
+      // Second short sparkle
+      const o2 = audioCtx.createOscillator();
+      const g2 = audioCtx.createGain();
+      g2.gain.setValueAtTime(0.0001, now + 0.18);
+      g2.gain.exponentialRampToValueAtTime(0.15, now + 0.20);
+      g2.gain.exponentialRampToValueAtTime(0.0001, now + 0.40);
+      o2.type = 'triangle';
+      o2.frequency.setValueAtTime(1319, now + 0.18); // E6
+      o2.connect(g2); g2.connect(audioCtx.destination);
+      o2.start(now + 0.18);
+      o2.stop(now + 0.40);
+    }catch(e){ /* ignore audio errors */ }
+  }
+
+  // --- TTS (TartuNLP v2) ---
+  const TTS_ENDPOINT = 'https://api.tartunlp.ai/text-to-speech/v2';
+  const ttsCache = new Map(); // key: `${speaker}|${speed}|${text}` -> objectURL
+
+  function currentWord(){
+    return ELS('.letter').map(n=>n.textContent).join('');
+  }
+
+  async function speakText(text, speaker='mari', spd=1){
+    const key = `${speaker}|${spd}|${text}`;
+    if(ttsCache.has(key)){
+      return playUrl(ttsCache.get(key));
+    }
+    const res = await fetch(TTS_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, speaker, speed: spd })
+    });
+    if(!res.ok){
+      const msg = await safeText(res);
+      throw new Error(`TTS HTTP ${res.status}: ${msg}`);
+    }
+    const blob = await res.blob(); // audio/wav
+    const url = URL.createObjectURL(blob);
+    ttsCache.set(key, url);
+    return playUrl(url);
+  }
+
+  function playUrl(url){
+    return new Promise((resolve) => {
+      const a = new Audio();
+      a.src = url;
+      a.onended = ()=> resolve();
+      a.onerror = ()=> resolve();
+      a.play().catch(()=> resolve());
+    });
+  }
+
+  async function safeText(res){
+    try{ return await res.text(); }catch{ return ''; }
+  }
+
+  function animatePill(el, anim){
+    if(!el) return;
+    el.classList.remove('anim-bump','anim-shake');
+    void el.offsetWidth; // reflow to restart animation
+    el.classList.add(anim === 'bump' ? 'anim-bump' : 'anim-shake');
+    setTimeout(()=>{
+      el.classList.remove('anim-bump','anim-shake');
+    }, 450);
+  }
+
+  function randomItem(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+  const PRAISES = [
+    'Tubli!','Väga hea!','Suurepärane!','Hästi tehtud!','Vinge!',
+    'Jätka samas vaimus!','Imeline!','Lahe töö!','Täpselt nii!','Õige vastus!',
+    'Fantastiline!','Suurepärane pingutus!','Super!','Vägev!','Oi kui nutikas!',
+    'See oli meisterlik!','Sa oled tõeline tegija!','Väga tubli töö!','Kõrgelt kiidetud!','Täpselt pihta!',
+    'Võrratu!','Ülimalt tubli!','See läks hiilgavalt!','Muljetavaldav!','Puhas kuld!',
+    'Täpsus nagu kellavärk!','Bravuurikas sooritus!','Õppur meister!','Ääretult tubli!','Sära edasi!',
+    'Tark tegu!','Täitsa super!','See oli võit!','Käsi südamel – suurepärane!','Oivaline töö!',
+    'Väga nutikas valik!','See oli õige mõte!','Hakkab looma!','Tipptulemus!','Suure töö võit!',
+    'Puhas rõõm!','Kõik klappis suurepäraselt!','Parim tulemus!','Täielik õnnestumine!','Lust vaadata!',
+    'Sa said sellega hakkama!','Väga selge vastus!','Tubli pingutus!','Edukas samm!','Õige tee!'
+  ];
+  let praiseQueue = [];
+  function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+  function initPraiseQueue(){ praiseQueue = shuffle([...PRAISES]); }
+  function praise(){
+    if(!praiseQueue.length) initPraiseQueue();
+    return praiseQueue.shift();
+  }
+
+  function pickTask(){
+    const levelTasks = LEVELS[levelIndex];
+    const idx = currentOrder[taskIndex] ?? Math.min(taskIndex, levelTasks.length-1);
+    return levelTasks[idx] || randomItem(levelTasks);
+  }
+
+  // --- Emoji choice builder to avoid ambiguous sets ---
+  const EMOJI_CATEGORY = new Map([
+    // animals
+    ['🐱','animal'],['🐶','animal'],['🐭','animal'],['🦔','animal'],['🐰','animal'],['🐵','animal'],['🐝','animal'],['🐞','animal'],['🦋','animal'],['🐮','animal'],
+    // vehicles
+    ['🚗','vehicle'],['🚌','vehicle'],['🚆','vehicle'],['🚲','vehicle'],['🚢','vehicle'],['⛵','vehicle'],['🛶','vehicle'],
+    // food
+    ['🍰','food'],['🥖','food'],['🥐','food'],['🥞','food'],['🍎','food'],['🍐','food'],['🍒','food'],['🍓','food'],['🍇','food'],['🫐','food'],['🍉','food'],['🍈','food'],['🥕','food'],['🥒','food'],['🌰','food'],['🥜','food'],
+    // drink
+    ['☕','drink'],['🍵','drink'],['🥛','drink'],
+    // plants/nature
+    ['🌸','nature'],['🌳','nature'],['🍃','nature'],['🌵','nature'],['🍀','nature'],
+    // weather/sky
+    ['☀️','sky'],['🌙','sky'],['⭐','sky'],['❄️','sky'],
+    // objects/symbols/tools
+    ['📖','object'],['📕','object'],['📗','object'],['📱','object'],['📞','object'],['📟','object'],['⚡','object'],['💡','object'],['🔌','object'],['⏰','object'],['🧭','object'],['⌛','object'],['🎲','object'],['🎈','object'],['🧸','object'],['🔔','object'],
+    // clothing
+    ['👟','clothing'],['🧦','clothing'],['🧤','clothing'],['🧢','clothing'],['👒','clothing'],['🧣','clothing']
+  ]);
+
+  const WORD_EMOJI = new Map([
+    ['RAAMAT','📖'],['RAAMATUD','📖'],['RAAMATU','📖'],
+    ['KIRI','📜'],['KIRSS','🍒'],['ÕUN','🍎'],['PIRN','🍐'],['ARBUUS','🍉'],['MAASIKAS','🍓'],['MUSTIKAS','🫐'],['MELON','🍈'],['KOOK','🍰'],
+    ['KASS','🐱'],['KOER','🐶'],['LEHM','🐮'],['SIIL','🦔'],['JÄNES','🐰'],['AHV','🐵'],
+    ['AUTO','🚗'],['BUSS','🚌'],['RONG','🚆'],['LAEV','🚢'],['JALGRATAS','🚲'],
+    ['PÄIKE','☀️'],['KUU','🌙'],['TÄHT','⭐'],['LUMI','❄️'],
+    ['LILL','🌸'],['PUU','🌳'],['LEHT','🍃'],
+    ['KELL','⏰'],['TELEFON','📱'],['ELEKTER','⚡']
+  ]);
+
+  function canonicalEmojiForWord(word, fallback){
+    const key = (word||'').toUpperCase();
+    return WORD_EMOJI.get(key) || fallback;
+  }
+
+  function randomFromCategories(excludeCat, count){
+    const pool = Array.from(EMOJI_CATEGORY.entries()).filter(([emo,cat])=> cat!==excludeCat).map(([emo])=>emo);
+    const out = [];
+    while(out.length < count && pool.length){
+      const i = Math.floor(Math.random()*pool.length);
+      const [emo] = pool.splice(i,1);
+      out.push(emo);
+    }
+    return out;
+  }
+
+  function buildChoicesForTask(t){
+    try{
+      const correct = canonicalEmojiForWord(t.word, (t.emojis && t.emojis[0]) || '⭐');
+      const cat = EMOJI_CATEGORY.get(correct) || 'object';
+      const distractors = randomFromCategories(cat, 2).filter(d => d !== correct);
+      while(distractors.length < 2){
+        const all = Array.from(EMOJI_CATEGORY.keys());
+        const pick = all[Math.floor(Math.random()*all.length)];
+        if(pick !== correct && !distractors.includes(pick)) distractors.push(pick);
+      }
+      return [correct, ...distractors];
+    }catch(e){
+      // Fallback to provided task emojis if something goes wrong
+      return (t.emojis && t.emojis.slice(0,3)) || [];
+    }
+  }
+
+  function renderTask(){
+    // If finished all tasks in the current level, handle level completion
+    if(taskIndex >= currentOrder.length){
+      finishLevel();
+      return;
+    }
+    const t = pickTask();
+    if(!t){
+      showGameOver();
+      return;
+    }
+    currentTask = t;
+    letters.innerHTML = '';
+    t.word.split('').forEach(ch => {
+      const d = document.createElement('div');
+      d.className = 'letter';
+      d.textContent = ch;
+      letters.appendChild(d);
+    });
+    fitWordToContainer();
+    renderChoices(t);
+    renderHUD();
+    renderDots();
+  }
+
+  // --- Fit long words to container by scaling the letters row ---
+  function fitWordToContainer(){
+    try{
+      const container = letters;
+      if(!container) return;
+      // reset scale first
+      container.style.transform = 'scale(1)';
+      container.style.transformOrigin = 'center center';
+      // compute required scale
+      const avail = container.parentElement ? container.parentElement.clientWidth - 24 : container.clientWidth;
+      const needed = container.scrollWidth;
+      if(needed > 0 && avail > 0){
+        const scale = Math.max(0.6, Math.min(1, avail / needed));
+        container.style.transform = `scale(${scale})`;
+      }
+    }catch(e){ /* no-op */ }
+  }
+  window.addEventListener('resize', ()=>{ try{ fitWordToContainer(); }catch{} });
+
+  function renderChoices(t){
+    choices.innerHTML = '';
+    let built = [];
+    try{ built = buildChoicesForTask(t) || []; }catch{ built = []; }
+    if(!built.length && Array.isArray(t.emojis)) built = t.emojis.slice(0,3);
+    const order = [0,1,2].sort(()=> Math.random() - 0.5);
+    const correctIndex = order.indexOf(0); // correct is at index 0 in built
+    order.forEach((srcIdx, pos) => {
+      const emo = built[srcIdx];
+      const c = document.createElement('button');
+      c.className = 'choice';
+      c.setAttribute('type','button');
+      c.setAttribute('aria-label', `Valik ${pos+1}`);
+      c.innerHTML = `<div class="emoji">${emo}</div>`;
+      const isCorrect = (pos === correctIndex);
+      c.addEventListener('click', () => onChoose(isCorrect, c));
+      choices.appendChild(c);
+    });
+  }
+
+  function renderHUD(){
+    tasksCount.textContent = taskIndex;
+    correctCount.textContent = correct;
+    if(wrongCount) wrongCount.textContent = wrong;
+    coinCount.textContent = coins;
+    stickerCount.textContent = stickers;
+    progress.style.setProperty('--p', `${Math.min((taskIndex/sessionLen())*100,100)}%`);
+    if(feedback){ feedback.className = 'feedback'; feedback.textContent = 'Vali õige pilt!'; }
+  }
+
+  function renderDots(){
+    if(!dots) return;
+    const frag = document.createDocumentFragment();
+    for(let i=0;i<sessionLen();i++){
+      const s = document.createElement('span');
+      s.className = 'dot';
+      if(i < results.length){
+        const r = results[i];
+        if(r === true) s.classList.add('good');
+        else if(r === false) s.classList.add('bad');
+      } else if(i === results.length){
+        s.classList.add('current');
+      }
+      frag.appendChild(s);
+    }
+    dots.innerHTML = '';
+    dots.appendChild(frag);
+  }
+
+  function onChoose(isCorrect, chosen){
+    const buttons = ELS('.choice');
+    buttons.forEach(b => b.disabled = true);
+    chosen.classList.add(isCorrect ? 'correct' : 'wrong');
+
+    if(isCorrect){
+      correct++; coins += 1;
+      if(correct % 4 === 0){ stickers += 1; toast('🎉 Saad kleepsu!'); }
+      toast('✅ '+praise());
+      playChime();
+      confetti(chosen);
+      const say = praise();
+      speakText(say.toLowerCase(), 'mari', 0.95).catch(()=>{});
+      if(feedback){ feedback.className = 'feedback good'; feedback.textContent = say; }
+      animatePill(pillCorrect, 'bump');
+      results.push(true);
+    } else {
+      toast('❌ Proovi uuesti!');
+      wrong++;
+      speakText('Proovi uuesti', 'mari', 0.95).catch(()=>{});
+      if(feedback){ feedback.className = 'feedback bad'; feedback.textContent = 'Vale vastus. Proovi järgmine!'; }
+      animatePill(pillWrong, 'shake');
+      results.push(false);
+    }
+
+    taskIndex++;
+    setTimeout(() => {
+      if(taskIndex >= sessionLen()){
+        levelComplete();
+      } else {
+        renderTask();
+      }
+    }, 650);
+  }
+
+  function levelComplete(){
+    toast(`Tase ${levelIndex+1} läbitud! Õigeid: ${correct}/${sessionLen()}`);
+    progress.style.setProperty('--p', '100%');
+    // Järgmine tase kui on
+    if(levelIndex < LEVELS.length-1){
+      levelIndex++;
+      startLevel();
+    } else {
+      // Show game over overlay
+      const over = EL('#gameover');
+      const title = EL('#gameover-title');
+      const text = EL('#gameover-text');
+      if(over){
+        if(title) title.textContent = 'Suurepärane!';
+        if(text) text.textContent = `Kõik tasemed läbitud! Õigeid vastuseid: ${correct}. Soovid mängida uuesti?`;
+        over.style.display = 'flex';
+        const btnAgain = EL('#btn-again');
+        const btnQuit = EL('#btn-quit');
+        if(btnAgain){ btnAgain.onclick = ()=>{ over.style.display='none'; resetSession(); }; }
+        if(btnQuit){ btnQuit.onclick = ()=>{ text.textContent = 'Aitäh mängimast! Kohtumiseni!'; }; }
+      } else {
+        toast('🎉 Kõik tasemed läbitud!');
+      }
+    }
+  }
+
+  function resetSession(){
+    levelIndex = 0;
+    startLevel();
+  }
+
+  function startLevel(){
+    taskIndex = 0; correct = 0; wrong = 0; coins = 0; stickers = 0; results = [];
+    // shuffle order for the whole level so difficulty doesn't ramp inside the level
+    const n = LEVELS[levelIndex].length;
+    currentOrder = Array.from({length: n}, (_,i)=>i).sort(()=> Math.random()-0.5);
+    tasksTotal.textContent = sessionLen();
+    // Näita eesmärki
+    const r = REWARDS[levelIndex];
+    toast(`Tase ${levelIndex+1}: Eesmärk – ${r.icon} ${r.text}`);
+    if(feedback){ feedback.className = 'feedback'; feedback.textContent = `Tase ${levelIndex+1}. Eesmärk: ${r.icon} ${r.text}`; }
+    renderTask();
+  }
+
+  // Events
+  btnSkip.addEventListener('click', ()=>{ results.push(null); taskIndex++; renderTask(); });
+  btnNew.addEventListener('click', resetSession);
+  // --- Welcome greeting autoplay with on-screen typewriter text ---
+  let greeted = false;
+  let greetAttempts = 0;
+  const welcomeTextEl = EL('#welcome-text');
+  const welcomeLevels = EL('#welcome-levels');
+  const welcomeActions = EL('#welcome-actions');
+  const GREETING_TEXT = 'Tere tulemast sõnajahi seiklusele! Vali oma tase: algaja, edasijõudnu või ekspert.';
+
+  function typewriter(el, text, speed=28){
+    if(!el) return Promise.resolve();
+    el.textContent = '';
+    return new Promise(resolve=>{
+      let i = 0;
+      const timer = setInterval(()=>{
+        el.textContent = text.slice(0, ++i);
+        if(i >= text.length){ clearInterval(timer); resolve(); }
+      }, speed);
+    });
+  }
+
+  async function playGreeting(){
+    if(greeted) return;
+    try{
+      greeted = true;
+      // kick off both: typewriter and audio; reveal choices after whichever finishes last
+      const tw = typewriter(welcomeTextEl, GREETING_TEXT, 24);
+      const au = speakText(GREETING_TEXT.toLowerCase(), 'mari', 0.95);
+      await Promise.allSettled([tw, au]);
+      if(welcomeLevels) welcomeLevels.style.display = '';
+      if(welcomeActions) welcomeActions.style.display = '';
+    }catch(e){ greeted = false; }
+  }
+  // Try to auto-play when welcome is visible
+  if(welcome){
+    // slight delay to allow DOM settle
+    const tryAuto = ()=>{
+      if(greeted) return;
+      greetAttempts++;
+      playGreeting();
+      if(!greeted && greetAttempts < 10){ setTimeout(tryAuto, 1000); }
+    };
+    setTimeout(()=>{ if(welcome.style.display !== 'none') tryAuto(); }, 200);
+    // Fallback: on first interaction or visibility change, try again
+    const tryOnce = ()=>{ if(!greeted) playGreeting(); document.removeEventListener('pointerdown', tryOnce); };
+    document.addEventListener('pointerdown', tryOnce, { once:true });
+    document.addEventListener('touchstart', tryOnce, { once:true });
+    document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && !greeted) playGreeting(); });
+  }
+  // Level button selection (emoji buttons)
+  let pendingLevel = 0;
+  const levelBtns = ELS('.level-btn');
+  if(levelBtns.length){
+    levelBtns.forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        levelBtns.forEach(b=>{ b.classList.remove('selected'); b.setAttribute('aria-pressed','false'); });
+        btn.classList.add('selected');
+        btn.setAttribute('aria-pressed','true');
+        pendingLevel = parseInt(btn.getAttribute('data-level')||'0',10) || 0;
+      });
+    });
+  }
+  if(btnStart){
+    btnStart.addEventListener('click', ()=>{
+      levelIndex = pendingLevel;
+      if(welcome) welcome.style.display = 'none';
+      // initialize session praise queue on game start
+      initPraiseQueue();
+      startLevel();
+    });
+  }
+
+  // --- Level completion flow ---
+  const levelDone = EL('#leveldone');
+  const btnLevelAgain = EL('#btn-level-again');
+  const btnLevelNext = EL('#btn-level-next');
+
+  function finishLevel(){
+    // If last level, show final gameover overlay
+    const lastLevel = (levelIndex >= LEVELS.length - 1);
+    if(lastLevel){
+      showGameOver();
+      return;
+    }
+    // Otherwise, show level-done overlay with big praise and let the player decide
+    if(levelDone){
+      const titleEl = EL('#leveldone-title');
+      const textEl = EL('#leveldone-text');
+      const levelNames = ['Algaja','Edasijõudnu','Ekspert'];
+      const name = levelNames[levelIndex] || 'Tase';
+      if(titleEl){ titleEl.textContent = 'Väga tubli!'; titleEl.classList.add('big'); }
+      if(textEl){ textEl.textContent = `${name} tase on läbitud. Soovid mängida sama taset uuesti või liikuda järgmisele tasemele?`; textEl.classList.add('big'); }
+      levelDone.style.display = 'flex';
+      // audio praise
+      try{ speakText(praise(), 'mari', 0.95); }catch(e){}
+    }
+  }
+
+  if(btnLevelAgain){
+    btnLevelAgain.addEventListener('click', ()=>{
+      if(levelDone) levelDone.style.display = 'none';
+      // restart same level
+      startLevel();
+    });
+  }
+  if(btnLevelNext){
+    btnLevelNext.addEventListener('click', ()=>{
+      if(levelDone) levelDone.style.display = 'none';
+      // move to next level on user decision only
+      levelIndex = Math.min(levelIndex + 1, LEVELS.length - 1);
+      startLevel();
+    });
+  }
+  if(btnSay){
+    btnSay.addEventListener('click', async ()=>{
+      // Use the exact task word and lowercase it to prevent letter-by-letter spelling
+      const text = (currentTask ? currentTask.word : currentWord()).toLowerCase();
+      btnSay.disabled = true;
+      try{
+        await speakText(text, 'mari', 0.8);
+      }catch(e){ console.error(e); toast('⚠️ TTS viga'); }
+      finally{ btnSay.disabled = false; }
+    });
+  }
+
+  // Start
+  // Do not auto-start. Wait for the player to press Alusta.
+  // Show overlay by default (already visible in HTML). If overlay is missing, fallback to starting level.
+  if(!welcome){ startLevel(); }
+
+  // --- Confetti ---
+  function confetti(anchor){
+    const rect = anchor.getBoundingClientRect();
+    const cx = rect.left + rect.width/2;
+    const cy = rect.top + rect.height/2;
+    const colors = ['#22c55e','#60a5fa','#facc15','#ef4444','#a78bfa'];
+    const n = 16;
+    for(let i=0;i<n;i++){
+      const s = document.createElement('span');
+      s.style.position='fixed';
+      s.style.left = cx+'px';
+      s.style.top = cy+'px';
+      s.style.width = s.style.height = (6+Math.random()*6)+'px';
+      s.style.background = colors[i%colors.length];
+      s.style.borderRadius = Math.random()>0.5?'2px':'50%';
+      s.style.pointerEvents='none';
+      s.style.zIndex='9999';
+      document.body.appendChild(s);
+      const ang = Math.random()*Math.PI*2;
+      const dist = 60+Math.random()*80;
+      const tx = Math.cos(ang)*dist;
+      const ty = Math.sin(ang)*dist - 40; // slight upward arc
+      const rot = (Math.random()*360)|0;
+      s.animate([
+        { transform:`translate(0,0) rotate(0deg)`, opacity:1 },
+        { transform:`translate(${tx}px, ${ty}px) rotate(${rot}deg)`, opacity:0 }
+      ], { duration: 800+Math.random()*400, easing:'cubic-bezier(.2,.7,.2,1)' })
+      .onfinish = ()=> s.remove();
+    }
+  }
+})();

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1220" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Sõnajahi Seiklus" />
+  <title>Sõnajahi Seiklus</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app shell" role="main">
+    <!-- Top App Bar -->
+    <header class="appbar">
+      <div class="appbar-left">
+        <h1 class="title">Sõnajahi Seiklus</h1>
+      </div>
+      <div class="appbar-right">
+        <div class="pill" id="pill-tasks">🧩 <span id="tasks-count">0</span>/<span id="tasks-total">12</span></div>
+        <div class="pill good" id="pill-correct">✅ <span id="correct-count">0</span></div>
+        <div class="pill bad" id="pill-wrong">❌ <span id="wrong-count">0</span></div>
+        <div class="pill" id="pill-coins">🪙 <span id="coin-count">0</span></div>
+        <div class="pill" id="pill-stickers">🏷️ <span id="sticker-count">0</span></div>
+      </div>
+    </header>
+
+    <!-- Feedback & progress -->
+    <div class="feedback" id="feedback" aria-live="polite">Vali õige pilt!</div>
+    <div id="dots" class="dots" aria-hidden="true"></div>
+    <div class="progress-wrap fixed">
+      <div class="progress" id="progress" style="--p:0%"></div>
+    </div>
+
+    <!-- Welcome overlay -->
+    <section id="welcome" class="overlay" aria-modal="true" role="dialog">
+      <div class="overlay-card">
+        <div class="overlay-hero" aria-hidden="true">
+          <!-- Simple inline SVG: treasure map + star -->
+          <svg width="180" height="120" viewBox="0 0 180 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="12" y="18" rx="14" ry="14" width="156" height="84" fill="#0f172a" stroke="#1f2937"/>
+            <path d="M26 90 C48 60, 72 66, 90 48 C104 34, 134 46, 154 30" stroke="#60a5fa" stroke-width="3" stroke-linecap="round" fill="none"/>
+            <circle cx="46" cy="66" r="5" fill="#22c55e"/>
+            <circle cx="106" cy="48" r="5" fill="#facc15"/>
+            <g transform="translate(138,44)">
+              <path d="M10 0 L12 7 L20 7 L13.5 11 L16 18 L10 13.5 L4 18 L6.5 11 L0 7 L8 7 Z" fill="#ef4444"/>
+            </g>
+          </svg>
+        </div>
+        <h2 class="overlay-title">Tere tulemast!</h2>
+        <p id="welcome-text" class="overlay-text">&nbsp;</p>
+        <div id="welcome-levels" class="level-choices" role="group" aria-label="Vali tase" style="display:none">
+          <button class="level-btn selected" data-level="0" aria-pressed="true">
+            <div class="lvl-emoji">🐣</div>
+            <div class="lvl-text">Algaja</div>
+          </button>
+          <button class="level-btn" data-level="1" aria-pressed="false">
+            <div class="lvl-emoji">🚀</div>
+            <div class="lvl-text">Edasijõudnu</div>
+          </button>
+          <button class="level-btn" data-level="2" aria-pressed="false">
+            <div class="lvl-emoji">👑</div>
+            <div class="lvl-text">Ekspert</div>
+          </button>
+        </div>
+        <div id="welcome-actions" class="overlay-actions" style="display:none">
+          <button id="btn-start" class="btn btn-primary overlay-start" type="button">Alusta</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Game over overlay -->
+    <section id="gameover" class="overlay" aria-modal="true" role="dialog" style="display:none">
+      <div class="overlay-card">
+        <h2 class="overlay-title" id="gameover-title">Tubli!</h2>
+        <p class="overlay-text" id="gameover-text">Kõik tasemed on läbitud. Soovid mängida uuesti?</p>
+        <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap">
+          <button id="btn-again" class="btn btn-primary" type="button">Mängi uuesti</button>
+          <button id="btn-quit" class="btn" type="button">Lõpeta tänaseks</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Level done overlay (non-final) -->
+    <section id="leveldone" class="overlay" aria-modal="true" role="dialog" style="display:none">
+      <div class="overlay-card">
+        <h2 class="overlay-title" id="leveldone-title">Väga tubli!</h2>
+        <p class="overlay-text" id="leveldone-text">Tase on läbitud. Soovid mängida sama taset uuesti või liikuda järgmisele tasemele?</p>
+        <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap">
+          <button id="btn-level-again" class="btn" type="button">Mängi uuesti</button>
+          <button id="btn-level-next" class="btn btn-primary" type="button">Järgmine tase</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Content area -->
+    <section class="content">
+      <div class="stage">
+        <div id="letters" class="letters" aria-live="polite" aria-atomic="true"></div>
+      </div>
+      <section class="choices" id="choices" aria-label="vali õige pilt"></section>
+    </section>
+
+    <!-- Bottom Bar -->
+    <footer class="bottombar">
+      <div class="controls">
+        <button class="btn" id="btn-skip" type="button">Jätan vahele</button>
+        <button class="btn btn-secondary" id="btn-say" type="button" aria-label="Kuula">Kuula</button>
+        <button class="btn btn-primary" id="btn-new" type="button">Uus mäng</button>
+      </div>
+    </footer>
+  </main>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
