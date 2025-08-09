@@ -740,7 +740,15 @@
   function visHandler(){ if(document.visibilityState==='visible' && !greeted && !greetingInFlight) playGreeting(); }
   async function tryOnce(){
     if(!audioUnlocked) await unlockAudio();
-    if(!greeted && !greetingInFlight) playGreeting();
+    if(!greeted && !greetingInFlight){
+      // Immediate reveal fallback
+      if(welcomeTextEl && !welcomeTextEl.textContent){ welcomeTextEl.textContent = GREETING_TEXT; }
+      if(welcomeLevels) welcomeLevels.style.display = '';
+      if(welcomeActions) welcomeActions.style.display = '';
+      greeted = true;
+      // Also attempt audio once in background, ignore errors
+      try{ speakText(GREETING_TEXT.toLowerCase(), 'mari', 0.95); }catch(e){}
+    }
     document.removeEventListener('pointerdown', tryOnce);
     document.removeEventListener('touchstart', tryOnce);
   }
@@ -867,6 +875,17 @@
   // Load external word bank in background
   loadWordBank().catch(()=>{});
   if(!welcome){ startLevel(); }
+  else {
+    // Hard safety: if after 2500ms nothing has shown, reveal choices
+    setTimeout(()=>{
+      if(!greeted){
+        if(welcomeTextEl && !welcomeTextEl.textContent){ welcomeTextEl.textContent = GREETING_TEXT; }
+        if(welcomeLevels) welcomeLevels.style.display = '';
+        if(welcomeActions) welcomeActions.style.display = '';
+        greeted = true;
+      }
+    }, 2500);
+  }
 
   // --- Confetti ---
   function confetti(anchor){
