@@ -209,6 +209,7 @@
   }
 
   let taskIndex = 0, correct = 0, wrong = 0, coins = 0, stickers = 0;
+  let roundCounter = 0; // strictly alternate rounds: even = word->emoji, odd = emoji->word
   const seenWords = new Set(); // prevent repeats across the whole session until refresh
   const seenEmojis = new Set(); // prevent showing the same emoji twice in a session
   let currentTask = null; // holds the active task so TTS can use the exact word
@@ -494,21 +495,13 @@
     }
     let t = pickTask();
     if(t && t.word){ seenWords.add((t.word||'').toUpperCase()); }
-    // If task unsuitable for word-choice round (no emoji), advance until suitable or done
-    let guard = 0;
-    while(t && !canonicalEmojiForWord(t.word, null) && guard < 3){
-      taskIndex++;
-      t = pickTask();
-      guard++;
-    }
     if(!t){
       showGameOver();
       return;
     }
     currentTask = t;
     letters.innerHTML = '';
-    const hasEmoji = !!canonicalEmojiForWord(t.word, null);
-    const isEmojiChoiceRound = (taskIndex % 2 === 0) && hasEmoji;
+    const isEmojiChoiceRound = (roundCounter % 2 === 0); // strictly alternate
     if(isEmojiChoiceRound){
       // Show the word (letters) and ask to pick correct emoji
       const letterEls = [];
@@ -523,13 +516,30 @@
       renderChoicesEmoji(t);
       // letter pop-in
       letterEls.forEach((el,i)=> setTimeout(()=> el.classList.add('pop'), 25 * i));
+      roundCounter++;
     } else {
       // Word-choice round: show the emoji (must exist), pick the correct WORD.
-      const emoji = canonicalEmojiForWord(t.word, null);
-      if(!emoji || seenEmojis.has(emoji)){
-        // Skip this task to avoid ❓ or repeating emoji
+      // Find the next suitable task with a valid, unseen emoji without breaking alternation
+      let attempts = 0; let emoji = canonicalEmojiForWord(t.word, null);
+      while(attempts < 10 && (!emoji || emoji === '❓' || seenEmojis.has(emoji))){
         taskIndex++;
-        renderTask();
+        if(taskIndex >= currentOrder.length){ finishLevel(); return; }
+        t = pickTask();
+        currentTask = t;
+        emoji = canonicalEmojiForWord(t.word, null);
+        attempts++;
+      }
+      if(!emoji || emoji === '❓'){
+        // Could not find a mapped emoji; switch to showing letters this round to avoid blocking
+        letters.innerHTML = '';
+        const letterEls = [];
+        (t.word||'').toUpperCase().split('').forEach(ch=>{
+          const d = document.createElement('div'); d.className='letter'; d.textContent=ch; letters.appendChild(d); letterEls.push(d);
+        });
+        fitWordToContainer();
+        renderChoicesEmoji(t);
+        letterEls.forEach((el,i)=> setTimeout(()=> el.classList.add('pop'), 25 * i));
+        roundCounter++;
         return;
       }
       const e = document.createElement('div');
@@ -538,6 +548,7 @@
       letters.appendChild(e);
       seenEmojis.add(emoji);
       renderChoicesWords(t);
+      roundCounter++;
     }
     renderHUD();
     renderDots();
@@ -732,11 +743,12 @@
     levelIndex = 0;
     seenWords.clear();
     seenEmojis.clear();
+    roundCounter = 0;
     startLevel();
   }
 
   function startLevel(){
-    taskIndex = 0; correct = 0; wrong = 0; coins = 0; stickers = 0; results = [];
+    taskIndex = 0; correct = 0; wrong = 0; coins = 0; stickers = 0; results = []; roundCounter = 0;
     // reset emoji repetition tracker per level start
     seenEmojis.clear();
     // Build a no-repeat order for the entire level (supports very large pools)
