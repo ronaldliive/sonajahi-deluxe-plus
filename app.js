@@ -210,6 +210,8 @@
 
   let taskIndex = 0, correct = 0, wrong = 0, coins = 0, stickers = 0;
   let roundCounter = 0; // strictly alternate rounds: even = word->emoji, odd = emoji->word
+  let lastWordShown = null; // for banning its emoji in the next emoji-choice round
+  let banNextEmoji = null; // emoji to exclude from next emoji-choice options
   const seenWords = new Set(); // prevent repeats across the whole session until refresh
   const seenEmojis = new Set(); // prevent showing the same emoji twice in a session
   let currentTask = null; // holds the active task so TTS can use the exact word
@@ -468,17 +470,18 @@
     return out;
   }
 
-  function buildChoicesForTask(t){
+  function buildChoicesForTask(t, banEmoji){
     try{
       // Only use canonical mapping; if missing, abort to avoid placeholder icons
       const correct = canonicalEmojiForWord(t.word, null);
       if(!correct) return [];
+      if(banEmoji && correct === banEmoji) return []; // force caller to pick another task
       const cat = EMOJI_CATEGORY.get(correct) || 'object';
-      const distractors = randomFromCategories(cat, 2).filter(d => d !== correct);
+      const distractors = randomFromCategories(cat, 2).filter(d => d !== correct && d !== banEmoji);
       while(distractors.length < 2){
         const all = Array.from(EMOJI_CATEGORY.keys());
         const pick = all[Math.floor(Math.random()*all.length)];
-        if(pick !== correct && !distractors.includes(pick)) distractors.push(pick);
+        if(pick !== correct && pick !== banEmoji && !distractors.includes(pick)) distractors.push(pick);
       }
       return [correct, ...distractors];
     }catch(e){
@@ -494,7 +497,6 @@
       return;
     }
     let t = pickTask();
-    if(t && t.word){ seenWords.add((t.word||'').toUpperCase()); }
     if(!t){
       showGameOver();
       return;
@@ -503,9 +505,23 @@
     letters.innerHTML = '';
     const isEmojiChoiceRound = (roundCounter % 2 === 0); // strictly alternate
     if(isEmojiChoiceRound){
-      // Show the word (letters) and ask to pick correct emoji
+      // If this task's correct emoji equals banned one, skip forward to keep the game from being trivial
+      let guard=0; let built=[]; let localT=t;
+      while(guard<6){
+        const testBuilt = buildChoicesForTask(localT, banNextEmoji);
+        if(testBuilt && testBuilt.length){ built = testBuilt; break; }
+        taskIndex++;
+        if(taskIndex >= currentOrder.length){ finishLevel(); return; }
+        localT = pickTask(); currentTask = localT;
+        guard++;
+      }
+      if(!built.length){ built = []; }
+      // mark actually shown word as seen
+      if(localT && localT.word){ seenWords.add((localT.word||'').toUpperCase()); }
+      // Show the word (letters) and ask to pick correct emoji (using localT)
       const letterEls = [];
-      t.word.toUpperCase().split('').forEach(ch => {
+      letters.innerHTML = '';
+      (localT.word||'').toUpperCase().split('').forEach(ch => {
         const d = document.createElement('div');
         d.className = 'letter';
         d.textContent = ch;
@@ -513,15 +529,18 @@
         letterEls.push(d);
       });
       fitWordToContainer();
-      renderChoicesEmoji(t);
+      renderChoicesEmoji(localT, built);
       // letter pop-in
       letterEls.forEach((el,i)=> setTimeout(()=> el.classList.add('pop'), 25 * i));
+      // set ban for next emoji-choice round
+      lastWordShown = (localT.word||'').toUpperCase();
+      banNextEmoji = canonicalEmojiForWord(lastWordShown, null) || null;
       roundCounter++;
     } else {
       // Word-choice round: show the emoji (must exist), pick the correct WORD.
-      // Find the next suitable task with a valid, unseen emoji without breaking alternation
+      // Find the next suitable task with a valid, unseen, and not-banned emoji without breaking alternation
       let attempts = 0; let emoji = canonicalEmojiForWord(t.word, null);
-      while(attempts < 10 && (!emoji || emoji === '❓' || seenEmojis.has(emoji))){
+      while(attempts < 12 && (!emoji || emoji === '❓' || seenEmojis.has(emoji) || (banNextEmoji && emoji === banNextEmoji))){
         taskIndex++;
         if(taskIndex >= currentOrder.length){ finishLevel(); return; }
         t = pickTask();
@@ -542,12 +561,17 @@
         roundCounter++;
         return;
       }
+      // mark actually shown word as seen
+      if(t && t.word){ seenWords.add((t.word||'').toUpperCase()); }
       const e = document.createElement('div');
       e.className = 'emoji-stage';
       e.textContent = emoji;
       letters.appendChild(e);
       seenEmojis.add(emoji);
       renderChoicesWords(t);
+      // after emoji->word round, clear ban if it matched the shown emoji
+      const justShown = emoji;
+      if(banNextEmoji && justShown === banNextEmoji){ banNextEmoji = null; }
       roundCounter++;
     }
     renderHUD();
@@ -579,10 +603,12 @@
   }
   window.addEventListener('resize', ()=>{ try{ fitWordToContainer(); }catch{} });
 
-  function renderChoicesEmoji(t){
+  function renderChoicesEmoji(t, prebuilt){
     choices.innerHTML = '';
-    let built = [];
-    try{ built = buildChoicesForTask(t) || []; }catch{ built = []; }
+    let built = Array.isArray(prebuilt) && prebuilt.length ? prebuilt.slice(0,3) : [];
+    if(!built.length){
+      try{ built = buildChoicesForTask(t, banNextEmoji) || []; }catch{ built = []; }
+    }
     if(!built.length && Array.isArray(t.emojis)) built = t.emojis.slice(0,3);
     const order = [0,1,2].sort(()=> Math.random() - 0.5);
     const correctIndex = order.indexOf(0); // correct is at index 0 in built
@@ -753,8 +779,17 @@
     seenEmojis.clear();
     // Build a no-repeat order for the entire level (supports very large pools)
     const levelArr = LEVELS[levelIndex];
-    const eligibleIdx = levelArr
+    // Build unique-by-word index list to avoid duplicates from large pools
+    const seenLocal = new Set();
+    const uniqueIdx = levelArr
       .map((t, i) => ({ i, w: (t.word||'').toUpperCase() }))
+      .filter(o => {
+        if(!o.w) return false;
+        if(seenLocal.has(o.w)) return false;
+        seenLocal.add(o.w);
+        return true;
+      });
+    const eligibleIdx = uniqueIdx
       .filter(o => !seenWords.has(o.w))
       .map(o => o.i);
     const baseIdx = eligibleIdx.length ? eligibleIdx : levelArr.map((_,i)=>i);
