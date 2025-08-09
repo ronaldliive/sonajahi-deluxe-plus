@@ -1,7 +1,19 @@
 {
   "levels": {
-    "algaja": ["words_algaja_1.json"],
-    "edasijoudnu": ["words_edasijoudnu_1.json"],
-    "ekspert": ["words_ekspert_1.json"]
+    "algaja": [
+      "words_algaja_1.json",
+      "words_algaja_2.json",
+      "words_algaja_3.json"
+    ],
+    "edasijoudnu": [
+      "words_edasijoudnu_1.json",
+      "words_edasijoudnu_2.json",
+      "words_edasijoudnu_3.json"
+    ],
+    "ekspert": [
+      "words_ekspert_1.json",
+      "words_ekspert_2.json",
+      "words_ekspert_3.json"
+    ]
   }
 }
