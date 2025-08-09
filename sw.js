@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sonajahi-cache-v5';
+const CACHE_NAME = 'sonajahi-cache-v6';
 const ASSETS = [
   './',
   './index.html',

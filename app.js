@@ -515,9 +515,11 @@
       letterEls.forEach((el,i)=> setTimeout(()=> el.classList.add('pop'), 25 * i));
     } else {
       // Show the emoji and ask to pick the correct WORD (uppercase)
-      const emoji = canonicalEmojiForWord(t.word, (t.emojis && t.emojis[0]) || '⭐');
+      let emoji = canonicalEmojiForWord(t.word, null);
       const e = document.createElement('div');
       e.className = 'emoji-stage';
+      // If no mapping, avoid showing a star (which implies TÄHT); show a neutral symbol instead
+      if(!emoji) emoji = '❓';
       e.textContent = emoji;
       letters.appendChild(e);
       renderChoicesWords(t);
