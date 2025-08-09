@@ -10,6 +10,8 @@ const ASSETS = [
   './words_algaja_1.json',
   './words_algaja_2.json',
   './words_algaja_3.json',
+  './words_algaja_4.json',
+  './words_algaja_5.json',
   './words_edasijoudnu_1.json',
   './words_edasijoudnu_2.json',
   './words_edasijoudnu_3.json',
