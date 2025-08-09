@@ -107,6 +107,7 @@
   ];
 
   let taskIndex = 0, correct = 0, wrong = 0, coins = 0, stickers = 0;
+  const seenWords = new Set(); // prevent repeats across the whole session until refresh
   let currentTask = null; // holds the active task so TTS can use the exact word
   let results = []; // per-task result: true/false/null
   let levelIndex = 0; // 0..4
@@ -132,9 +133,18 @@
   const welcome = EL('#welcome');
   const btnStart = EL('#btn-start');
   const btnGreet = EL('#btn-greet');
+  const isIOS = /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  let audioUnlocked = false;
 
   function sessionLen(){ return currentOrder.length || LEVELS[levelIndex].length; }
   tasksTotal.textContent = sessionLen();
+
+  // Filter: Beginner level should only contain short words (<=5 letters)
+  try{
+    if(Array.isArray(LEVELS[0])){
+      LEVELS[0] = LEVELS[0].filter(t => (t.word || '').length <= 5 && (t.word || '').toUpperCase() !== 'KIRVES');
+    }
+  }catch(e){ /* ignore */ }
 
   function toast(msg){
     let t = EL('.toast');
@@ -176,6 +186,18 @@
 
   // --- Chime sound for correct answer ---
   let audioCtx = null;
+  async function unlockAudio(){
+    try{
+      if(audioUnlocked) return;
+      if(!audioCtx){ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+      if(audioCtx.state === 'suspended' && audioCtx.resume){ await audioCtx.resume(); }
+      // play a tiny silent buffer to satisfy iOS gesture requirement
+      const buf = audioCtx.createBuffer(1, 1, 22050);
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf; src.connect(audioCtx.destination); src.start(0);
+      audioUnlocked = true;
+    }catch(e){ /* best-effort */ }
+  }
   function playChime(){
     try{
       if(!audioCtx){ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
@@ -357,6 +379,7 @@
       return;
     }
     const t = pickTask();
+    if(t && t.word){ seenWords.add((t.word||'').toUpperCase()); }
     if(!t){
       showGameOver();
       return;
@@ -529,9 +552,14 @@
 
   function startLevel(){
     taskIndex = 0; correct = 0; wrong = 0; coins = 0; stickers = 0; results = [];
-    // shuffle order for the whole level so difficulty doesn't ramp inside the level
-    const n = LEVELS[levelIndex].length;
-    currentOrder = Array.from({length: n}, (_,i)=>i).sort(()=> Math.random()-0.5);
+    // Build a no-repeat order for the entire level (supports very large pools)
+    const levelArr = LEVELS[levelIndex];
+    const eligibleIdx = levelArr
+      .map((t, i) => ({ i, w: (t.word||'').toUpperCase() }))
+      .filter(o => !seenWords.has(o.w))
+      .map(o => o.i);
+    const baseIdx = eligibleIdx.length ? eligibleIdx : levelArr.map((_,i)=>i);
+    currentOrder = baseIdx.sort(()=> Math.random()-0.5);
     tasksTotal.textContent = sessionLen();
     // Näita eesmärki
     const r = REWARDS[levelIndex];
@@ -568,31 +596,63 @@
   async function playGreeting(){
     if(greeted) return;
     try{
-      greeted = true;
-      // kick off both: typewriter and audio; reveal choices after whichever finishes last
+      // Ensure audio unlocked on iOS before trying to play TTS
+      if(isIOS && !audioUnlocked){ await unlockAudio(); }
+      // kick off both: typewriter and audio; reveal after both settle
       const tw = typewriter(welcomeTextEl, GREETING_TEXT, 24);
-      const au = speakText(GREETING_TEXT.toLowerCase(), 'mari', 0.95);
+      let au;
+      try{
+        au = speakText(GREETING_TEXT.toLowerCase(), 'mari', 0.95);
+      }catch(e){ au = Promise.resolve(); }
       await Promise.allSettled([tw, au]);
+      greeted = true;
       if(welcomeLevels) welcomeLevels.style.display = '';
       if(welcomeActions) welcomeActions.style.display = '';
     }catch(e){ greeted = false; }
-  }
-  // Try to auto-play when welcome is visible
-  if(welcome){
-    // slight delay to allow DOM settle
-    const tryAuto = ()=>{
-      if(greeted) return;
-      greetAttempts++;
-      playGreeting();
-      if(!greeted && greetAttempts < 10){ setTimeout(tryAuto, 1000); }
-    };
-    setTimeout(()=>{ if(welcome.style.display !== 'none') tryAuto(); }, 200);
-    // Fallback: on first interaction or visibility change, try again
-    const tryOnce = ()=>{ if(!greeted) playGreeting(); document.removeEventListener('pointerdown', tryOnce); };
-    document.addEventListener('pointerdown', tryOnce, { once:true });
-    document.addEventListener('touchstart', tryOnce, { once:true });
-    document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && !greeted) playGreeting(); });
-  }
+    // Try to auto-play when welcome is visible
+    if(welcome){
+      // slight delay to allow DOM settle
+      const tryAuto = ()=>{
+        if(greeted) return;
+        greetAttempts++;
+        playGreeting();
+        if(!greeted && greetAttempts < 10){ setTimeout(tryAuto, 1000); }
+      };
+      setTimeout(()=>{ if(welcome.style.display !== 'none') tryAuto(); }, 200);
+      // Fallback: on first interaction, unlock audio and try again
+      const tryOnce = async ()=>{
+        if(!audioUnlocked) await unlockAudio();
+        if(!greeted) playGreeting();
+        document.removeEventListener('pointerdown', tryOnce);
+        document.removeEventListener('touchstart', tryOnce);
+      };
+      document.addEventListener('pointerdown', tryOnce, { once:true });
+      document.addEventListener('touchstart', tryOnce, { once:true });
+      document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && !greeted) playGreeting(); });
+
+      // If autoplay still blocked on iOS, show a visible unlock button in the welcome actions
+      const welcomeActions = EL('#welcome-actions');
+      if(isIOS && welcomeActions){
+        let unlockBtn = EL('#btn-unlock-audio');
+        if(!unlockBtn){
+          unlockBtn = document.createElement('button');
+          unlockBtn.id = 'btn-unlock-audio';
+          unlockBtn.className = 'btn ripple';
+          unlockBtn.textContent = 'Koputa heli lubamiseks';
+          unlockBtn.addEventListener('click', async ()=>{
+            await unlockAudio();
+            // Retry greeting once after unlocking
+            if(!greeted) playGreeting();
+            unlockBtn.style.display = 'none';
+          });
+          welcomeActions.prepend(unlockBtn);
+        }
+        // Hide unlock when audio becomes available
+        const hideIfUnlocked = ()=>{ if(audioUnlocked && unlockBtn) unlockBtn.style.display = 'none'; };
+        document.addEventListener('pointerdown', hideIfUnlocked, { once:true });
+        setTimeout(hideIfUnlocked, 3000);
+      }
+    }
   // Level button selection (emoji buttons)
   let pendingLevel = 0;
   const levelBtns = ELS('.level-btn');
