@@ -96,17 +96,17 @@ h1{ font-size:20px; margin:0 0 8px }
   body{ display:block; padding:0; min-height:100svh; }
   .app{ max-width:none; width:100%; }
   .shell{ border:none; border-radius:0; box-shadow:none; min-height:100svh; width:100vw; display:flex; flex-direction:column; }
-  .appbar{ padding-top: calc(10px + var(--safe-top)); padding-left: calc(12px + var(--safe-left)); padding-right: calc(12px + var(--safe-right)); }
-  .bottombar{ padding-bottom: calc(10px + var(--safe-bottom)); padding-left: calc(12px + var(--safe-left)); padding-right: calc(12px + var(--safe-right)); }
+  .appbar{ padding:8px calc(10px + var(--safe-right)) 8px calc(10px + var(--safe-left)); padding-top: calc(8px + var(--safe-top)); }
+  .bottombar{ padding:8px calc(10px + var(--safe-right)) calc(8px + var(--safe-bottom)) calc(10px + var(--safe-left)); }
   .progress-wrap.fixed{ margin-left:auto; margin-right:auto; margin-top:4px; width:min(60%, 360px); }
   .progress-wrap{ height:2px; background:#0f172a; border-color:#0f172a }
   .progress{ background:linear-gradient(90deg, rgba(34,197,94,.9), rgba(96,165,250,.9)) }
-  .content{ padding:12px calc(12px + var(--safe-right)) calc(18px + var(--safe-bottom)); flex:1; overflow:auto; }
-  .stage{ min-height:20vh; border-radius:22px; }
-  .letter{ width:clamp(60px, 16vw, 84px); height:clamp(60px, 16vw, 84px); min-width:clamp(60px, 16vw, 84px); font-size:clamp(30px, 7vw, 40px) }
-  .choice .emoji{ font-size:clamp(80px, 16vw, 140px) !important; line-height:1 }
-  .choices{ gap:16px; grid-template-columns: 1fr !important; }
-  .choice{ min-height:clamp(160px, 28vw, 240px) !important; padding:24px }
+  .content{ padding:10px calc(10px + var(--safe-right)) calc(12px + var(--safe-bottom)); flex:1; overflow:hidden; display:flex; flex-direction:column; gap:10px }
+  .stage{ flex: 0 0 28svh; border-radius:18px; }
+  .letter{ width:clamp(54px, 14vw, 80px); height:clamp(54px, 14vw, 80px); min-width:clamp(54px, 14vw, 80px); font-size:clamp(28px, 6.5vw, 38px) }
+  .choice .emoji{ font-size:clamp(72px, 15vw, 120px) !important; line-height:1 }
+  .choices{ flex:1; display:flex !important; flex-direction:column; gap:10px; margin-top:0; padding-top:6px; border-top:1px solid #1f2937 }
+  .choice{ flex:1 1 0; min-height:0 !important; padding:18px }
 }
 
 /* Choices */
