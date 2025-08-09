@@ -37,41 +37,20 @@
       <div class="progress" id="progress" style="--p:0%"></div>
     </div>
 
-    <!-- Welcome overlay -->
-    <section id="welcome" class="overlay" aria-modal="true" role="dialog">
-      <div class="overlay-card">
-        <div class="overlay-hero" aria-hidden="true">
-          <!-- Simple inline SVG: treasure map + star -->
-          <svg width="180" height="120" viewBox="0 0 180 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="12" y="18" rx="14" ry="14" width="156" height="84" fill="#0f172a" stroke="#1f2937"/>
-            <path d="M26 90 C48 60, 72 66, 90 48 C104 34, 134 46, 154 30" stroke="#60a5fa" stroke-width="3" stroke-linecap="round" fill="none"/>
-            <circle cx="46" cy="66" r="5" fill="#22c55e"/>
-            <circle cx="106" cy="48" r="5" fill="#facc15"/>
-            <g transform="translate(138,44)">
-              <path d="M10 0 L12 7 L20 7 L13.5 11 L16 18 L10 13.5 L4 18 L6.5 11 L0 7 L8 7 Z" fill="#ef4444"/>
-            </g>
-          </svg>
-        </div>
-        <h2 class="overlay-title">Tere tulemast!</h2>
-        <p id="welcome-text" class="overlay-text">&nbsp;</p>
-        <div id="welcome-levels" class="level-choices" role="group" aria-label="Vali tase" style="display:none">
-          <button class="level-btn selected" data-level="0" aria-pressed="true">
-            <div class="lvl-emoji">🐣</div>
-            <div class="lvl-text">Algaja</div>
-          </button>
-          <button class="level-btn" data-level="1" aria-pressed="false">
-            <div class="lvl-emoji">🚀</div>
-            <div class="lvl-text">Edasijõudnu</div>
-          </button>
-          <button class="level-btn" data-level="2" aria-pressed="false">
-            <div class="lvl-emoji">👑</div>
-            <div class="lvl-text">Ekspert</div>
-          </button>
-        </div>
-        <div id="welcome-actions" class="overlay-actions" style="display:none">
-          <button id="btn-start" class="btn btn-primary overlay-start" type="button">Alusta</button>
-        </div>
-      </div>
+    <!-- Inline level selection (welcome removed) -->
+    <section id="inline-levels" class="level-choices" role="group" aria-label="Vali tase">
+      <button class="level-btn selected" data-level="0" aria-pressed="true">
+        <div class="lvl-emoji">🐣</div>
+        <div class="lvl-text">Algaja</div>
+      </button>
+      <button class="level-btn" data-level="1" aria-pressed="false">
+        <div class="lvl-emoji">🚀</div>
+        <div class="lvl-text">Edasijõudnu</div>
+      </button>
+      <button class="level-btn" data-level="2" aria-pressed="false">
+        <div class="lvl-emoji">👑</div>
+        <div class="lvl-text">Ekspert</div>
+      </button>
     </section>
 
     <!-- Game over overlay -->

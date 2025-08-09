@@ -232,9 +232,7 @@
   const btnSkip = EL('#btn-skip');
   const btnNew = EL('#btn-new');
   const btnSay = EL('#btn-say');
-  const welcome = EL('#welcome');
-  const btnStart = EL('#btn-start');
-  const btnGreet = EL('#btn-greet');
+  // Welcome overlay removed; inline level selection is used
   const isIOS = /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   let audioUnlocked = false;
 
@@ -675,120 +673,7 @@
   document.querySelectorAll('.btn').forEach(b=> b.classList.add('ripple'));
   btnSkip.addEventListener('click', ()=>{ results.push(null); taskIndex++; renderTask(); });
   btnNew.addEventListener('click', resetSession);
-  // --- Welcome greeting autoplay with on-screen typewriter text ---
-  let greeted = false;
-  let greetingInFlight = false;
-  let greetAttempts = 0;
-  const welcomeTextEl = EL('#welcome-text');
-  const welcomeLevels = EL('#welcome-levels');
-  const welcomeActions = EL('#welcome-actions');
-  const GREETING_TEXT = 'Tere tulemast sõnajahi seiklusele! Vali oma tase: algaja, edasijõudnu või ekspert.';
-
-  // Cancelable typewriter
-  let typewriterStopFlag = false;
-  function stopTypewriter(){ typewriterStopFlag = true; }
-  function typewriter(el, text, speed=28){
-    if(!el) return Promise.resolve();
-    el.textContent = '';
-    typewriterStopFlag = false;
-    return new Promise(resolve=>{
-      let i = 0;
-      const timer = setInterval(()=>{
-        if(typewriterStopFlag){ clearInterval(timer); resolve(); return; }
-        el.textContent = text.slice(0, ++i);
-        if(i >= text.length){ clearInterval(timer); resolve(); }
-      }, speed);
-    });
-  }
-
-  async function playGreeting(){
-    if(greeted || greetingInFlight) return;
-    greetingInFlight = true;
-    try{
-      // Ensure audio unlocked on iOS before trying to play TTS
-      if(isIOS && !audioUnlocked){ await unlockAudio(); }
-      // kick off both: typewriter and audio; reveal after both settle
-      const tw = typewriter(welcomeTextEl, GREETING_TEXT, 24);
-      let au;
-      try{
-        au = speakText(GREETING_TEXT.toLowerCase(), 'mari', 0.95);
-      }catch(e){ au = Promise.resolve(); }
-      const revealTimeout = new Promise(res=> setTimeout(res, 4500));
-      await Promise.race([
-        Promise.allSettled([tw, au]),
-        revealTimeout
-      ]);
-      greeted = true;
-      if(welcomeLevels) welcomeLevels.style.display = '';
-      if(welcomeActions) welcomeActions.style.display = '';
-    }catch(e){ greeted = false; }
-    finally{ greetingInFlight = false; }
-  }
-
-  // Try to auto-play when welcome is visible
-  // Hold references to listeners/timeouts so we can clean them up after greeted
-  let tryAutoTimeoutId = null;
-  let hideIfUnlockedTimeoutId = null;
-  const cleanupWelcomeListeners = ()=>{
-    document.removeEventListener('pointerdown', tryOnce);
-    document.removeEventListener('touchstart', tryOnce);
-    document.removeEventListener('visibilitychange', visHandler);
-    if(hideIfUnlockedTimeoutId){ clearTimeout(hideIfUnlockedTimeoutId); hideIfUnlockedTimeoutId = null; }
-    if(tryAutoTimeoutId){ clearTimeout(tryAutoTimeoutId); tryAutoTimeoutId = null; }
-  };
-
-  function visHandler(){ if(document.visibilityState==='visible' && !greeted && !greetingInFlight) playGreeting(); }
-  async function tryOnce(){
-    if(!audioUnlocked) await unlockAudio();
-    if(!greeted && !greetingInFlight){
-      // Immediate reveal fallback
-      if(welcomeTextEl && !welcomeTextEl.textContent){ welcomeTextEl.textContent = GREETING_TEXT; }
-      if(welcomeLevels) welcomeLevels.style.display = '';
-      if(welcomeActions) welcomeActions.style.display = '';
-      greeted = true;
-      // Also attempt audio once in background, ignore errors
-      try{ speakText(GREETING_TEXT.toLowerCase(), 'mari', 0.95); }catch(e){}
-    }
-    document.removeEventListener('pointerdown', tryOnce);
-    document.removeEventListener('touchstart', tryOnce);
-  }
-
-  if(welcome){
-    // slight delay to allow DOM settle
-    const tryAuto = ()=>{
-      if(greeted || greetingInFlight) return;
-      greetAttempts++;
-      playGreeting();
-      if(!greeted && greetAttempts < 10){ setTimeout(tryAuto, 1000); }
-    };
-    tryAutoTimeoutId = setTimeout(()=>{ if(welcome.style.display !== 'none' && !greeted) tryAuto(); }, 200);
-    // Fallback: on first interaction, unlock audio and try again
-    document.addEventListener('pointerdown', tryOnce, { once:true });
-    document.addEventListener('touchstart', tryOnce, { once:true });
-    document.addEventListener('visibilitychange', visHandler);
-
-    // If autoplay still blocked on iOS, show a visible unlock button in the welcome actions
-    if(isIOS && welcomeActions){
-      let unlockBtn = EL('#btn-unlock-audio');
-      if(!unlockBtn){
-        unlockBtn = document.createElement('button');
-        unlockBtn.id = 'btn-unlock-audio';
-        unlockBtn.className = 'btn ripple';
-        unlockBtn.textContent = 'Koputa heli lubamiseks';
-        unlockBtn.addEventListener('click', async ()=>{
-          await unlockAudio();
-          // Retry greeting once after unlocking
-          if(!greeted) playGreeting();
-          unlockBtn.style.display = 'none';
-        });
-        welcomeActions.prepend(unlockBtn);
-      }
-      // Hide unlock when audio becomes available
-      const hideIfUnlocked = ()=>{ if(audioUnlocked && unlockBtn) unlockBtn.style.display = 'none'; };
-      document.addEventListener('pointerdown', hideIfUnlocked, { once:true });
-      hideIfUnlockedTimeoutId = setTimeout(hideIfUnlocked, 3000);
-    }
-  }
+  // Welcome/TTS greeting removed – start immediately
   // Level button selection (emoji buttons)
   let pendingLevel = 0;
   const levelBtns = ELS('.level-btn');
@@ -799,22 +684,13 @@
         btn.classList.add('selected');
         btn.setAttribute('aria-pressed','true');
         pendingLevel = parseInt(btn.getAttribute('data-level')||'0',10) || 0;
+        // Switch level immediately (welcome removed)
+        levelIndex = pendingLevel;
+        startLevel();
       });
     });
   }
-  if(btnStart){
-    btnStart.addEventListener('click', ()=>{
-      levelIndex = pendingLevel;
-      // Cancel greeting animations and reveal if still running
-      stopTypewriter();
-      greeted = true;
-      if(welcome) welcome.style.display = 'none';
-      cleanupWelcomeListeners();
-      // initialize session praise queue on game start
-      initPraiseQueue();
-      startLevel();
-    });
-  }
+  // No start button – levels can be switched any time from inline selector
 
   // --- Level completion flow ---
   const levelDone = EL('#leveldone');
@@ -872,20 +748,10 @@
   // Start
   // Do not auto-start. Wait for the player to press Alusta.
   // Show overlay by default (already visible in HTML). If overlay is missing, fallback to starting level.
-  // Load external word bank in background
+  // Load external word bank then start immediately
   loadWordBank().catch(()=>{});
-  if(!welcome){ startLevel(); }
-  else {
-    // Hard safety: if after 2500ms nothing has shown, reveal choices
-    setTimeout(()=>{
-      if(!greeted){
-        if(welcomeTextEl && !welcomeTextEl.textContent){ welcomeTextEl.textContent = GREETING_TEXT; }
-        if(welcomeLevels) welcomeLevels.style.display = '';
-        if(welcomeActions) welcomeActions.style.display = '';
-        greeted = true;
-      }
-    }, 2500);
-  }
+  initPraiseQueue();
+  startLevel();
 
   // --- Confetti ---
   function confetti(anchor){
