@@ -625,6 +625,7 @@
   btnNew.addEventListener('click', resetSession);
   // --- Welcome greeting autoplay with on-screen typewriter text ---
   let greeted = false;
+  let greetingInFlight = false;
   let greetAttempts = 0;
   const welcomeTextEl = EL('#welcome-text');
   const welcomeLevels = EL('#welcome-levels');
@@ -644,7 +645,8 @@
   }
 
   async function playGreeting(){
-    if(greeted) return;
+    if(greeted || greetingInFlight) return;
+    greetingInFlight = true;
     try{
       // Ensure audio unlocked on iOS before trying to play TTS
       if(isIOS && !audioUnlocked){ await unlockAudio(); }
@@ -659,6 +661,7 @@
       if(welcomeLevels) welcomeLevels.style.display = '';
       if(welcomeActions) welcomeActions.style.display = '';
     }catch(e){ greeted = false; }
+    finally{ greetingInFlight = false; }
   }
 
   // Try to auto-play when welcome is visible
