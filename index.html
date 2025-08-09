@@ -37,20 +37,16 @@
       <div class="progress" id="progress" style="--p:0%"></div>
     </div>
 
-    <!-- Inline level selection (welcome removed) -->
-    <section id="inline-levels" class="level-choices" role="group" aria-label="Vali tase">
-      <button class="level-btn selected" data-level="0" aria-pressed="true">
-        <div class="lvl-emoji">🐣</div>
-        <div class="lvl-text">Algaja</div>
-      </button>
-      <button class="level-btn" data-level="1" aria-pressed="false">
-        <div class="lvl-emoji">🚀</div>
-        <div class="lvl-text">Edasijõudnu</div>
-      </button>
-      <button class="level-btn" data-level="2" aria-pressed="false">
-        <div class="lvl-emoji">👑</div>
-        <div class="lvl-text">Ekspert</div>
-      </button>
+    <!-- Inline level selection replaced with a natural dropdown to avoid confusion with answer emojis -->
+    <section class="content" style="padding-top:8px">
+      <div class="ctrl" aria-label="Vali tase">
+        <label for="level-select" class="tiny" style="min-width:64px">Tase</label>
+        <select id="level-select">
+          <option value="0" selected>Algaja</option>
+          <option value="1">Edasijõudnu</option>
+          <option value="2">Ekspert</option>
+        </select>
+      </div>
     </section>
 
     <!-- Game over overlay -->

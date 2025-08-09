@@ -486,20 +486,32 @@
     }
     currentTask = t;
     letters.innerHTML = '';
-    const letterEls = [];
-    t.word.split('').forEach(ch => {
-      const d = document.createElement('div');
-      d.className = 'letter';
-      d.textContent = ch;
-      letters.appendChild(d);
-      letterEls.push(d);
-    });
-    fitWordToContainer();
-    renderChoices(t);
+    const isEmojiChoiceRound = (taskIndex % 2 === 0);
+    if(isEmojiChoiceRound){
+      // Show the word (letters) and ask to pick correct emoji
+      const letterEls = [];
+      t.word.toUpperCase().split('').forEach(ch => {
+        const d = document.createElement('div');
+        d.className = 'letter';
+        d.textContent = ch;
+        letters.appendChild(d);
+        letterEls.push(d);
+      });
+      fitWordToContainer();
+      renderChoicesEmoji(t);
+      // letter pop-in
+      letterEls.forEach((el,i)=> setTimeout(()=> el.classList.add('pop'), 25 * i));
+    } else {
+      // Show the emoji and ask to pick the correct WORD (uppercase)
+      const emoji = canonicalEmojiForWord(t.word, (t.emojis && t.emojis[0]) || '⭐');
+      const e = document.createElement('div');
+      e.className = 'emoji-stage';
+      e.textContent = emoji;
+      letters.appendChild(e);
+      renderChoicesWords(t);
+    }
     renderHUD();
     renderDots();
-    // letter pop-in
-    letterEls.forEach((el,i)=> setTimeout(()=> el.classList.add('pop'), 25 * i));
   }
 
   // --- Fit long words to container by scaling the letters row ---
@@ -527,7 +539,7 @@
   }
   window.addEventListener('resize', ()=>{ try{ fitWordToContainer(); }catch{} });
 
-  function renderChoices(t){
+  function renderChoicesEmoji(t){
     choices.innerHTML = '';
     let built = [];
     try{ built = buildChoicesForTask(t) || []; }catch{ built = []; }
@@ -548,6 +560,48 @@
       created.push(c);
     });
     // staggered entrance
+    requestAnimationFrame(()=>{
+      created.forEach((el,i)=> setTimeout(()=> el.classList.add('show'), 40 * i));
+    });
+  }
+
+  function buildWordChoicesForTask(t){
+    const correct = (t.word||'').toUpperCase();
+    const levelTasks = LEVELS[levelIndex] || [];
+    // Build pool of distractor words (unique, not the same as correct)
+    const pool = levelTasks
+      .map(x => (x.word||'').toUpperCase())
+      .filter(w => w && w !== correct);
+    // Get two unique random distractors
+    const picks = new Set();
+    while(picks.size < 2 && pool.length){
+      const i = Math.floor(Math.random()*pool.length);
+      picks.add(pool.splice(i,1)[0]);
+    }
+    const distractors = Array.from(picks);
+    while(distractors.length < 2){ distractors.push('XXXX'); }
+    return [correct, ...distractors];
+  }
+
+  function renderChoicesWords(t){
+    choices.innerHTML = '';
+    let built = [];
+    try{ built = buildWordChoicesForTask(t) || []; }catch{ built = []; }
+    const order = [0,1,2].sort(()=> Math.random() - 0.5);
+    const correctIndex = order.indexOf(0);
+    const created = [];
+    order.forEach((srcIdx, pos) => {
+      const word = (built[srcIdx]||'').toUpperCase();
+      const c = document.createElement('button');
+      c.className = 'choice enter ripple';
+      c.setAttribute('type','button');
+      c.setAttribute('aria-label', `Valik ${pos+1}`);
+      c.innerHTML = `<div class="word">${word}</div>`;
+      const isCorrect = (pos === correctIndex);
+      c.addEventListener('click', () => onChoose(isCorrect, c));
+      choices.appendChild(c);
+      created.push(c);
+    });
     requestAnimationFrame(()=>{
       created.forEach((el,i)=> setTimeout(()=> el.classList.add('show'), 40 * i));
     });
@@ -661,6 +715,9 @@
     const baseIdx = eligibleIdx.length ? eligibleIdx : levelArr.map((_,i)=>i);
     currentOrder = shuffleArray(baseIdx.slice());
     tasksTotal.textContent = sessionLen();
+    // reflect current level in dropdown if present
+    const sel = EL('#level-select');
+    if(sel){ sel.value = String(levelIndex); }
     // Näita eesmärki
     const r = REWARDS[levelIndex];
     toast(`Tase ${levelIndex+1}: Eesmärk – ${r.icon} ${r.text}`);
@@ -674,20 +731,13 @@
   btnSkip.addEventListener('click', ()=>{ results.push(null); taskIndex++; renderTask(); });
   btnNew.addEventListener('click', resetSession);
   // Welcome/TTS greeting removed – start immediately
-  // Level button selection (emoji buttons)
-  let pendingLevel = 0;
-  const levelBtns = ELS('.level-btn');
-  if(levelBtns.length){
-    levelBtns.forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        levelBtns.forEach(b=>{ b.classList.remove('selected'); b.setAttribute('aria-pressed','false'); });
-        btn.classList.add('selected');
-        btn.setAttribute('aria-pressed','true');
-        pendingLevel = parseInt(btn.getAttribute('data-level')||'0',10) || 0;
-        // Switch level immediately (welcome removed)
-        levelIndex = pendingLevel;
-        startLevel();
-      });
+  // Level selection via dropdown
+  const levelSelect = EL('#level-select');
+  if(levelSelect){
+    levelSelect.addEventListener('change', ()=>{
+      const v = parseInt(levelSelect.value || '0', 10) || 0;
+      levelIndex = Math.max(0, Math.min(v, LEVELS.length-1));
+      startLevel();
     });
   }
   // No start button – levels can be switched any time from inline selector
