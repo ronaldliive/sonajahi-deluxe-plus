@@ -187,8 +187,8 @@
   function toTask(w){
     const word = (w||'').toUpperCase();
     const emo = canonicalEmojiForWord(word, null);
-    // Include the word even if emoji mapping is missing; emoji rounds will be skipped for such words
-    return { word, emojis: emo ? [emo] : [], answer: 0 };
+    if(!emo) return null; // only include words with a known emoji mapping
+    return { word, emojis: [emo], answer: 0 };
   }
 
   async function mergeWordBank(data){
@@ -210,6 +210,7 @@
 
   let taskIndex = 0, correct = 0, wrong = 0, coins = 0, stickers = 0;
   const seenWords = new Set(); // prevent repeats across the whole session until refresh
+  const seenEmojis = new Set(); // prevent showing the same emoji twice in a session
   let currentTask = null; // holds the active task so TTS can use the exact word
   let results = []; // per-task result: true/false/null
   let levelIndex = 0; // 0..4
@@ -514,14 +515,19 @@
       // letter pop-in
       letterEls.forEach((el,i)=> setTimeout(()=> el.classList.add('pop'), 25 * i));
     } else {
-      // Show the emoji and ask to pick the correct WORD (uppercase)
-      let emoji = canonicalEmojiForWord(t.word, null);
+      // Word-choice round: show the emoji (must exist), pick the correct WORD.
+      const emoji = canonicalEmojiForWord(t.word, null);
+      if(!emoji || seenEmojis.has(emoji)){
+        // Skip this task to avoid ❓ or repeating emoji
+        taskIndex++;
+        renderTask();
+        return;
+      }
       const e = document.createElement('div');
       e.className = 'emoji-stage';
-      // If no mapping, avoid showing a star (which implies TÄHT); show a neutral symbol instead
-      if(!emoji) emoji = '❓';
       e.textContent = emoji;
       letters.appendChild(e);
+      seenEmojis.add(emoji);
       renderChoicesWords(t);
     }
     renderHUD();
@@ -585,7 +591,7 @@
     // Build pool of distractor words (unique, not the same as correct)
     const pool = levelTasks
       .map(x => (x.word||'').toUpperCase())
-      .filter(w => w && w !== correct);
+      .filter(w => w && w !== correct && !!canonicalEmojiForWord(w, null));
     // Get two unique random distractors
     const picks = new Set();
     while(picks.size < 2 && pool.length){
@@ -715,11 +721,15 @@
 
   function resetSession(){
     levelIndex = 0;
+    seenWords.clear();
+    seenEmojis.clear();
     startLevel();
   }
 
   function startLevel(){
     taskIndex = 0; correct = 0; wrong = 0; coins = 0; stickers = 0; results = [];
+    // reset emoji repetition tracker per level start
+    seenEmojis.clear();
     // Build a no-repeat order for the entire level (supports very large pools)
     const levelArr = LEVELS[levelIndex];
     const eligibleIdx = levelArr
