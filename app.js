@@ -187,8 +187,8 @@
   function toTask(w){
     const word = (w||'').toUpperCase();
     const emo = canonicalEmojiForWord(word, null);
-    if(!emo) return null; // only include words we can map to an emoji
-    return { word, emojis: [emo], answer: 0 };
+    // Include the word even if emoji mapping is missing; emoji rounds will be skipped for such words
+    return { word, emojis: emo ? [emo] : [], answer: 0 };
   }
 
   async function mergeWordBank(data){
@@ -497,7 +497,8 @@
     }
     currentTask = t;
     letters.innerHTML = '';
-    const isEmojiChoiceRound = (taskIndex % 2 === 0);
+    const hasEmoji = !!canonicalEmojiForWord(t.word, null);
+    const isEmojiChoiceRound = (taskIndex % 2 === 0) && hasEmoji;
     if(isEmojiChoiceRound){
       // Show the word (letters) and ask to pick correct emoji
       const letterEls = [];
@@ -811,15 +812,12 @@
     });
   }
 
-  // Start: load large word bank if available, then start level
+  // Start: load large word bank if available, then start level ONCE
   (async function init(){
     try{ await loadWordBank(); }catch(e){}
+    initPraiseQueue();
     startLevel();
   })();
-  // Load external word bank then start immediately
-  loadWordBank().catch(()=>{});
-  initPraiseQueue();
-  startLevel();
 
   // --- Confetti ---
   function confetti(anchor){
