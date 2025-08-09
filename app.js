@@ -25,7 +25,14 @@
       { word: 'MAJA', emojis: ['🏠','🚲','🍭'], answer: 0 },
       { word: 'PUU', emojis: ['🌳','🌵','🍀'], answer: 0 },
       { word: 'MUNA', emojis: ['🥚','🍎','🧀'], answer: 0 },
-      { word: 'LEHM', emojis: ['🐮','🐭','🐔'], answer: 0 }
+      { word: 'LEHM', emojis: ['🐮','🐭','🐔'], answer: 0 },
+      { word: 'LEIB', emojis: ['🥖','🥐','🥞'], answer: 0 },
+      { word: 'ÕUN', emojis: ['🍎','🍒','🍓'], answer: 0 },
+      { word: 'PIRN', emojis: ['🍐','🍋','🍏'], answer: 0 },
+      { word: 'KOKK', emojis: ['👨‍🍳','👨‍⚕️','👮‍♂️'], answer: 0 },
+      { word: 'RATASTOOL', emojis: ['♿','🚲','🛴'], answer: 0 },
+      { word: 'KIRVES', emojis: ['🪓','🔧','🔨'], answer: 0 },
+      { word: 'RAHA', emojis: ['💰','🧯','🔔'], answer: 0 }
     ],
     // Level 2: diakriitikutega ja tuttavad asjad (edasijõudnu)
     [
@@ -45,7 +52,11 @@
       { word: 'MUSTIKAS', emojis: ['🫐','🍇','🍏'], answer: 0 },
       { word: 'ÕUN', emojis: ['🍎','🍒','🍓'], answer: 0 },
       { word: 'PIRN', emojis: ['🍐','🍋','🍏'], answer: 0 },
-      { word: 'KIRSS', emojis: ['🍒','🍓','🍎'], answer: 0 }
+      { word: 'KIRSS', emojis: ['🍒','🍓','🍎'], answer: 0 },
+      { word: 'KÜÜSLAUK', emojis: ['🧄','🥬','🌽'], answer: 0 },
+      { word: 'SEEN', emojis: ['🍄','🌰','🥜'], answer: 0 },
+      { word: 'VEEDEL', emojis: ['💧','🔥','🌪️'], answer: 0 },
+      { word: 'LENDUR', emojis: ['👨‍✈️','👷','👨‍🍳'], answer: 0 }
     ],
     // Level 3: pikemad või segadust tekitavad paarid (ekspert)
     [
@@ -64,7 +75,10 @@
       { word: 'SIIL', emojis: ['🦔','🐷','🐭'], answer: 0 },
       { word: 'ELEKTER', emojis: ['⚡','💡','🔌'], answer: 0 },
       { word: 'TELEFON', emojis: ['📱','📞','📟'], answer: 0 },
-      { word: 'LAEV', emojis: ['🚢','⛵','🛶'], answer: 0 }
+      { word: 'LAEV', emojis: ['🚢','⛵','🛶'], answer: 0 },
+      { word: 'ASTRONOOM', emojis: ['🧑‍🚀','👨‍🔧','🧑‍🎓'], answer: 0 },
+      { word: 'ROBOTT', emojis: ['🤖','👾','🧠'], answer: 0 },
+      { word: 'TEADLANE', emojis: ['🧑‍🔬','👨‍🎓','🧑‍🍳'], answer: 0 }
     ],
     // Level 4: loomad/objektid sarnaste segajatega
     [
@@ -128,6 +142,18 @@
     if(!t){ t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); }
     t.textContent = msg; t.classList.add('show');
     setTimeout(()=> t.classList.remove('show'), 900);
+  }
+
+  // --- Haptics helper (best-effort across platforms) ---
+  function haptic(type){
+    try{
+      if(navigator && typeof navigator.vibrate === 'function'){
+        if(type === 'success') navigator.vibrate([12, 20, 12]);
+        else if(type === 'error') navigator.vibrate([20, 40, 20]);
+        else navigator.vibrate(8);
+      }
+      // Future: add platform-specific hooks if available
+    }catch(e){ /* ignore */ }
   }
 
   function playBuzz(){
@@ -424,6 +450,7 @@
     chosen.classList.add(isCorrect ? 'correct' : 'wrong');
 
     if(isCorrect){
+      haptic('success');
       correct++; coins += 1;
       if(correct % 4 === 0){ stickers += 1; toast('🎉 Saad kleepsu!'); }
       toast('✅ '+praise());
@@ -435,6 +462,7 @@
       animatePill(pillCorrect, 'bump');
       results.push(true);
     } else {
+      haptic('error');
       toast('❌ Proovi uuesti!');
       wrong++;
       speakText('Proovi uuesti', 'mari', 0.95).catch(()=>{});
