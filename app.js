@@ -106,6 +106,22 @@
     { icon: '👑', text: 'Kuninglik kroon' },
   ];
 
+  // Robust shuffle using Fisher–Yates with crypto fallback
+  function rng(){
+    try{
+      const u = new Uint32Array(1);
+      crypto.getRandomValues(u);
+      return u[0] / 2**32;
+    }catch{ return Math.random(); }
+  }
+  function shuffleArray(arr){
+    for(let i = arr.length - 1; i > 0; i--){
+      const j = Math.floor(rng() * (i + 1));
+      const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+    }
+    return arr;
+  }
+
   // --- Large word bank loader ---
   async function loadWordBank(){
     try{
@@ -593,7 +609,7 @@
       .filter(o => !seenWords.has(o.w))
       .map(o => o.i);
     const baseIdx = eligibleIdx.length ? eligibleIdx : levelArr.map((_,i)=>i);
-    currentOrder = baseIdx.sort(()=> Math.random()-0.5);
+    currentOrder = shuffleArray(baseIdx.slice());
     tasksTotal.textContent = sessionLen();
     // Näita eesmärki
     const r = REWARDS[levelIndex];
