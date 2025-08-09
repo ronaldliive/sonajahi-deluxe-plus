@@ -363,16 +363,20 @@
     }
     currentTask = t;
     letters.innerHTML = '';
+    const letterEls = [];
     t.word.split('').forEach(ch => {
       const d = document.createElement('div');
       d.className = 'letter';
       d.textContent = ch;
       letters.appendChild(d);
+      letterEls.push(d);
     });
     fitWordToContainer();
     renderChoices(t);
     renderHUD();
     renderDots();
+    // letter pop-in
+    letterEls.forEach((el,i)=> setTimeout(()=> el.classList.add('pop'), 25 * i));
   }
 
   // --- Fit long words to container by scaling the letters row ---
@@ -407,16 +411,22 @@
     if(!built.length && Array.isArray(t.emojis)) built = t.emojis.slice(0,3);
     const order = [0,1,2].sort(()=> Math.random() - 0.5);
     const correctIndex = order.indexOf(0); // correct is at index 0 in built
+    const created = [];
     order.forEach((srcIdx, pos) => {
       const emo = built[srcIdx];
       const c = document.createElement('button');
-      c.className = 'choice';
+      c.className = 'choice enter ripple';
       c.setAttribute('type','button');
       c.setAttribute('aria-label', `Valik ${pos+1}`);
       c.innerHTML = `<div class="emoji">${emo}</div>`;
       const isCorrect = (pos === correctIndex);
       c.addEventListener('click', () => onChoose(isCorrect, c));
       choices.appendChild(c);
+      created.push(c);
+    });
+    // staggered entrance
+    requestAnimationFrame(()=>{
+      created.forEach((el,i)=> setTimeout(()=> el.classList.add('show'), 40 * i));
     });
   }
 
@@ -531,6 +541,8 @@
   }
 
   // Events
+  // Add ripple to static buttons
+  document.querySelectorAll('.btn').forEach(b=> b.classList.add('ripple'));
   btnSkip.addEventListener('click', ()=>{ results.push(null); taskIndex++; renderTask(); });
   btnNew.addEventListener('click', resetSession);
   // --- Welcome greeting autoplay with on-screen typewriter text ---

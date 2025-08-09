@@ -117,6 +117,8 @@ h1{ font-size:20px; margin:0 0 8px }
   display:flex; align-items:center; justify-content:center; gap:10px; border:1px solid #1f2937; background:var(--tile);
   border-radius:14px; padding:18px; min-height:100px; cursor:pointer; transition:transform .06s ease, border-color .2s ease, background .2s ease;
 }
+.choice.enter{ opacity:0; transform:translateY(10px) scale(.98) }
+.choice.enter.show{ opacity:1; transform:translateY(0) scale(1); transition:transform .22s cubic-bezier(.2,.8,.2,1), opacity .22s ease }
 .choice:active{ transform:scale(.98) }
 .choice .emoji{ font-size:44px }
 .choice.correct{ outline:2px solid #16a34a; border-color:#16a34a44; background:linear-gradient(0deg,rgba(34,197,94,.08),transparent) }
@@ -144,6 +146,8 @@ h1{ font-size:20px; margin:0 0 8px }
 /* Ensure long words fit and are centered */
 .stage{ overflow:hidden }
 .letters{ display:inline-flex; white-space:nowrap; margin:0 auto; will-change:transform }
+.letter{ transform:scale(.96); opacity:.95; transition:transform .15s ease, opacity .15s ease }
+.letter.pop{ transform:scale(1); opacity:1 }
 
 /* Generic control container (used by level selector) */
 .ctrl{ display:flex; align-items:center; gap:10px; background:#0b1220; border:1px solid #1f2937; padding:8px 10px; border-radius:10px }
@@ -152,3 +156,17 @@ h1{ font-size:20px; margin:0 0 8px }
 /* Toast */
 .toast{ position:fixed; left:50%; bottom:16px; transform:translateX(-50%); background:rgba(2,6,23,.85); color:var(--text); border:1px solid #1f2937; padding:10px 12px; border-radius:10px; font-weight:600; box-shadow:0 8px 24px rgba(0,0,0,.35); opacity:0; pointer-events:none; transition:opacity .2s ease }
 .toast.show{ opacity:1 }
+
+/* Ripple effect for taps */
+.ripple{ position:relative; overflow:hidden }
+.ripple:after{
+  content:''; position:absolute; left:50%; top:50%; width:10px; height:10px; background:rgba(255,255,255,.25);
+  transform:translate(-50%,-50%) scale(1); border-radius:50%; opacity:0; pointer-events:none;
+}
+.ripple:active:after{ animation:ripple .4s ease }
+@keyframes ripple{ from{ opacity:.6; transform:translate(-50%,-50%) scale(1) } to{ opacity:0; transform:translate(-50%,-50%) scale(24) } }
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce){
+  *{ animation:none !important; transition:none !important }
+}
