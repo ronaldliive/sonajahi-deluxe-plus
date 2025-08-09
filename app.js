@@ -106,6 +106,40 @@
     { icon: '👑', text: 'Kuninglik kroon' },
   ];
 
+  // --- Large word bank loader ---
+  async function loadWordBank(){
+    try{
+      const res = await fetch('words.json', { cache: 'no-store' });
+      if(!res.ok) return;
+      const data = await res.json();
+      await mergeWordBank(data);
+    }catch(e){ /* ignore offline or missing */ }
+  }
+
+  function toTask(w){
+    const word = (w||'').toUpperCase();
+    const emo = canonicalEmojiForWord(word, null);
+    if(!emo) return null; // only include words we can map to an emoji
+    return { word, emojis: [emo], answer: 0 };
+  }
+
+  async function mergeWordBank(data){
+    if(!data || !data.levels) return;
+    const L = data.levels;
+    const addMany = (arr, intoLevel, filterFn) => {
+      if(!Array.isArray(arr)) return;
+      const tasks = arr.map(toTask).filter(Boolean);
+      const filtered = typeof filterFn === 'function' ? tasks.filter(t => filterFn(t.word)) : tasks;
+      LEVELS[intoLevel].push(...filtered);
+    };
+    // Level 0: Algaja – max 5 letters
+    addMany(L.algaja, 0, w => w.length <= 5);
+    // Level 1: Edasijõudnu – allow accents/common words
+    addMany(L.edasijoudnu || L.edasijõudnu, 1);
+    // Level 2: Ekspert – longer words ok
+    addMany(L.ekspert, 2);
+  }
+
   let taskIndex = 0, correct = 0, wrong = 0, coins = 0, stickers = 0;
   const seenWords = new Set(); // prevent repeats across the whole session until refresh
   let currentTask = null; // holds the active task so TTS can use the exact word
@@ -609,50 +643,51 @@
       if(welcomeLevels) welcomeLevels.style.display = '';
       if(welcomeActions) welcomeActions.style.display = '';
     }catch(e){ greeted = false; }
-    // Try to auto-play when welcome is visible
-    if(welcome){
-      // slight delay to allow DOM settle
-      const tryAuto = ()=>{
-        if(greeted) return;
-        greetAttempts++;
-        playGreeting();
-        if(!greeted && greetAttempts < 10){ setTimeout(tryAuto, 1000); }
-      };
-      setTimeout(()=>{ if(welcome.style.display !== 'none') tryAuto(); }, 200);
-      // Fallback: on first interaction, unlock audio and try again
-      const tryOnce = async ()=>{
-        if(!audioUnlocked) await unlockAudio();
-        if(!greeted) playGreeting();
-        document.removeEventListener('pointerdown', tryOnce);
-        document.removeEventListener('touchstart', tryOnce);
-      };
-      document.addEventListener('pointerdown', tryOnce, { once:true });
-      document.addEventListener('touchstart', tryOnce, { once:true });
-      document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && !greeted) playGreeting(); });
+  }
 
-      // If autoplay still blocked on iOS, show a visible unlock button in the welcome actions
-      const welcomeActions = EL('#welcome-actions');
-      if(isIOS && welcomeActions){
-        let unlockBtn = EL('#btn-unlock-audio');
-        if(!unlockBtn){
-          unlockBtn = document.createElement('button');
-          unlockBtn.id = 'btn-unlock-audio';
-          unlockBtn.className = 'btn ripple';
-          unlockBtn.textContent = 'Koputa heli lubamiseks';
-          unlockBtn.addEventListener('click', async ()=>{
-            await unlockAudio();
-            // Retry greeting once after unlocking
-            if(!greeted) playGreeting();
-            unlockBtn.style.display = 'none';
-          });
-          welcomeActions.prepend(unlockBtn);
-        }
-        // Hide unlock when audio becomes available
-        const hideIfUnlocked = ()=>{ if(audioUnlocked && unlockBtn) unlockBtn.style.display = 'none'; };
-        document.addEventListener('pointerdown', hideIfUnlocked, { once:true });
-        setTimeout(hideIfUnlocked, 3000);
+  // Try to auto-play when welcome is visible
+  if(welcome){
+    // slight delay to allow DOM settle
+    const tryAuto = ()=>{
+      if(greeted) return;
+      greetAttempts++;
+      playGreeting();
+      if(!greeted && greetAttempts < 10){ setTimeout(tryAuto, 1000); }
+    };
+    setTimeout(()=>{ if(welcome.style.display !== 'none') tryAuto(); }, 200);
+    // Fallback: on first interaction, unlock audio and try again
+    const tryOnce = async ()=>{
+      if(!audioUnlocked) await unlockAudio();
+      if(!greeted) playGreeting();
+      document.removeEventListener('pointerdown', tryOnce);
+      document.removeEventListener('touchstart', tryOnce);
+    };
+    document.addEventListener('pointerdown', tryOnce, { once:true });
+    document.addEventListener('touchstart', tryOnce, { once:true });
+    document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && !greeted) playGreeting(); });
+
+    // If autoplay still blocked on iOS, show a visible unlock button in the welcome actions
+    if(isIOS && welcomeActions){
+      let unlockBtn = EL('#btn-unlock-audio');
+      if(!unlockBtn){
+        unlockBtn = document.createElement('button');
+        unlockBtn.id = 'btn-unlock-audio';
+        unlockBtn.className = 'btn ripple';
+        unlockBtn.textContent = 'Koputa heli lubamiseks';
+        unlockBtn.addEventListener('click', async ()=>{
+          await unlockAudio();
+          // Retry greeting once after unlocking
+          if(!greeted) playGreeting();
+          unlockBtn.style.display = 'none';
+        });
+        welcomeActions.prepend(unlockBtn);
       }
+      // Hide unlock when audio becomes available
+      const hideIfUnlocked = ()=>{ if(audioUnlocked && unlockBtn) unlockBtn.style.display = 'none'; };
+      document.addEventListener('pointerdown', hideIfUnlocked, { once:true });
+      setTimeout(hideIfUnlocked, 3000);
     }
+  }
   // Level button selection (emoji buttons)
   let pendingLevel = 0;
   const levelBtns = ELS('.level-btn');
@@ -732,6 +767,8 @@
   // Start
   // Do not auto-start. Wait for the player to press Alusta.
   // Show overlay by default (already visible in HTML). If overlay is missing, fallback to starting level.
+  // Load external word bank in background
+  loadWordBank().catch(()=>{});
   if(!welcome){ startLevel(); }
 
   // --- Confetti ---

@@ -1,0 +1,13 @@
+{
+  "levels": {
+    "algaja": [
+      "KOOK", "KASS", "KOER", "AUTO", "BUSS", "PALL", "NUKK", "LILL", "LEHT", "KALA", "PAIKE", "KUU", "TAHT", "MAJA", "PUU", "MUNA", "LEHM", "LEIB", "OUN", "PIRN"
+    ],
+    "edasijoudnu": [
+      "LUMI", "SÜDA", "PÄHKEL", "LEIB", "JÄÄ", "RAAMAT", "KING", "KINDAD", "MÜTS", "SUKK", "KOHV", "TEE", "VAARIKAS", "MUSTIKAS", "ÕUN", "PIRN", "KIRSS", "KÜÜSLAUK", "SEEN"
+    ],
+    "ekspert": [
+      "ARBUUS", "PORGAND", "KURK", "MAASIKAS", "MELON", "DRAAKON", "RONG", "LENDUR", "KELL", "LIBLIKAS", "JÄNES", "AHV", "SIIL", "ELEKTER", "TELEFON", "LAEV"
+    ]
+  }
+}
