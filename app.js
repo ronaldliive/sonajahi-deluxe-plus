@@ -122,14 +122,66 @@
     return arr;
   }
 
-  // --- Large word bank loader ---
+  // --- Large word bank loader (manifest + chunks) ---
   async function loadWordBank(){
     try{
-      const res = await fetch('words.json', { cache: 'no-store' });
-      if(!res.ok) return;
-      const data = await res.json();
-      await mergeWordBank(data);
+      // Prefer chunked manifest; fall back to words.json if present
+      let manifest;
+      try{
+        const mr = await fetch('words_manifest.json', { cache: 'no-store' });
+        if(mr.ok) manifest = await mr.json();
+      }catch{}
+      if(manifest && manifest.levels){
+        await loadFromManifest(manifest);
+        return;
+      }
+      // fallback
+      try{
+        const res = await fetch('words.json', { cache: 'no-store' });
+        if(res.ok){
+          const data = await res.json();
+          await mergeWordBank(data);
+        }
+      }catch{}
     }catch(e){ /* ignore offline or missing */ }
+  }
+
+  async function loadFromManifest(man){
+    const byLevel = man.levels || {};
+    // helper to fetch JSON safely
+    const fetchJson = async (path)=>{
+      try{ const r = await fetch(path, { cache:'no-store' }); return r.ok ? r.json() : null; }catch{ return null; }
+    };
+    // gather words arrays
+    const mergeUpper = (arr)=> (Array.isArray(arr)?arr:[]).map(w=> (w||'').toUpperCase());
+    const uniq = (arr)=> Array.from(new Set(arr));
+    const pushLevel = (levelIdx, wordsArr, filterFn)=>{
+      const tasks = wordsArr.map(toTask).filter(Boolean);
+      const filtered = typeof filterFn==='function' ? tasks.filter(t=>filterFn(t.word)) : tasks;
+      LEVELS[levelIdx].push(...filtered);
+    };
+    // Algaja
+    if(Array.isArray(byLevel.algaja)){
+      let all = [];
+      for(const f of byLevel.algaja){ const j = await fetchJson(f); if(j && Array.isArray(j.words)) all = all.concat(mergeUpper(j.words)); }
+      all = uniq(all);
+      pushLevel(0, all, w=> w.length <= 5);
+    }
+    // Edasijõudnu (accept both keys)
+    const adv = Array.isArray(byLevel.edasijoudnu)? byLevel.edasijoudnu : byLevel.edasijõudnu;
+    if(Array.isArray(adv)){
+      let all = [];
+      for(const f of adv){ const j = await fetchJson(f); if(j && Array.isArray(j.words)) all = all.concat(mergeUpper(j.words)); }
+      all = uniq(all);
+      pushLevel(1, all);
+    }
+    // Ekspert
+    if(Array.isArray(byLevel.ekspert)){
+      let all = [];
+      for(const f of byLevel.ekspert){ const j = await fetchJson(f); if(j && Array.isArray(j.words)) all = all.concat(mergeUpper(j.words)); }
+      all = uniq(all);
+      pushLevel(2, all);
+    }
   }
 
   function toTask(w){
@@ -632,12 +684,17 @@
   const welcomeActions = EL('#welcome-actions');
   const GREETING_TEXT = 'Tere tulemast sõnajahi seiklusele! Vali oma tase: algaja, edasijõudnu või ekspert.';
 
+  // Cancelable typewriter
+  let typewriterStopFlag = false;
+  function stopTypewriter(){ typewriterStopFlag = true; }
   function typewriter(el, text, speed=28){
     if(!el) return Promise.resolve();
     el.textContent = '';
+    typewriterStopFlag = false;
     return new Promise(resolve=>{
       let i = 0;
       const timer = setInterval(()=>{
+        if(typewriterStopFlag){ clearInterval(timer); resolve(); return; }
         el.textContent = text.slice(0, ++i);
         if(i >= text.length){ clearInterval(timer); resolve(); }
       }, speed);
@@ -656,7 +713,11 @@
       try{
         au = speakText(GREETING_TEXT.toLowerCase(), 'mari', 0.95);
       }catch(e){ au = Promise.resolve(); }
-      await Promise.allSettled([tw, au]);
+      const revealTimeout = new Promise(res=> setTimeout(res, 4500));
+      await Promise.race([
+        Promise.allSettled([tw, au]),
+        revealTimeout
+      ]);
       greeted = true;
       if(welcomeLevels) welcomeLevels.style.display = '';
       if(welcomeActions) welcomeActions.style.display = '';
@@ -665,25 +726,38 @@
   }
 
   // Try to auto-play when welcome is visible
+  // Hold references to listeners/timeouts so we can clean them up after greeted
+  let tryAutoTimeoutId = null;
+  let hideIfUnlockedTimeoutId = null;
+  const cleanupWelcomeListeners = ()=>{
+    document.removeEventListener('pointerdown', tryOnce);
+    document.removeEventListener('touchstart', tryOnce);
+    document.removeEventListener('visibilitychange', visHandler);
+    if(hideIfUnlockedTimeoutId){ clearTimeout(hideIfUnlockedTimeoutId); hideIfUnlockedTimeoutId = null; }
+    if(tryAutoTimeoutId){ clearTimeout(tryAutoTimeoutId); tryAutoTimeoutId = null; }
+  };
+
+  function visHandler(){ if(document.visibilityState==='visible' && !greeted && !greetingInFlight) playGreeting(); }
+  async function tryOnce(){
+    if(!audioUnlocked) await unlockAudio();
+    if(!greeted && !greetingInFlight) playGreeting();
+    document.removeEventListener('pointerdown', tryOnce);
+    document.removeEventListener('touchstart', tryOnce);
+  }
+
   if(welcome){
     // slight delay to allow DOM settle
     const tryAuto = ()=>{
-      if(greeted) return;
+      if(greeted || greetingInFlight) return;
       greetAttempts++;
       playGreeting();
       if(!greeted && greetAttempts < 10){ setTimeout(tryAuto, 1000); }
     };
-    setTimeout(()=>{ if(welcome.style.display !== 'none') tryAuto(); }, 200);
+    tryAutoTimeoutId = setTimeout(()=>{ if(welcome.style.display !== 'none' && !greeted) tryAuto(); }, 200);
     // Fallback: on first interaction, unlock audio and try again
-    const tryOnce = async ()=>{
-      if(!audioUnlocked) await unlockAudio();
-      if(!greeted) playGreeting();
-      document.removeEventListener('pointerdown', tryOnce);
-      document.removeEventListener('touchstart', tryOnce);
-    };
     document.addEventListener('pointerdown', tryOnce, { once:true });
     document.addEventListener('touchstart', tryOnce, { once:true });
-    document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && !greeted) playGreeting(); });
+    document.addEventListener('visibilitychange', visHandler);
 
     // If autoplay still blocked on iOS, show a visible unlock button in the welcome actions
     if(isIOS && welcomeActions){
@@ -704,7 +778,7 @@
       // Hide unlock when audio becomes available
       const hideIfUnlocked = ()=>{ if(audioUnlocked && unlockBtn) unlockBtn.style.display = 'none'; };
       document.addEventListener('pointerdown', hideIfUnlocked, { once:true });
-      setTimeout(hideIfUnlocked, 3000);
+      hideIfUnlockedTimeoutId = setTimeout(hideIfUnlocked, 3000);
     }
   }
   // Level button selection (emoji buttons)
@@ -723,7 +797,11 @@
   if(btnStart){
     btnStart.addEventListener('click', ()=>{
       levelIndex = pendingLevel;
+      // Cancel greeting animations and reveal if still running
+      stopTypewriter();
+      greeted = true;
       if(welcome) welcome.style.display = 'none';
+      cleanupWelcomeListeners();
       // initialize session praise queue on game start
       initPraiseQueue();
       startLevel();

@@ -1,11 +1,15 @@
-const CACHE_NAME = 'sonajahi-cache-v1';
+const CACHE_NAME = 'sonajahi-cache-v2';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
   './app.js',
   './manifest.json',
-  './words.json'
+  './words.json',
+  './words_manifest.json',
+  './words_algaja_1.json',
+  './words_edasijoudnu_1.json',
+  './words_ekspert_1.json'
 ];
 self.addEventListener('install', (e) => {
   e.waitUntil(
