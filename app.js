@@ -431,12 +431,23 @@
 
   const WORD_EMOJI = new Map([
     ['RAAMAT','📖'],['RAAMATUD','📖'],['RAAMATU','📖'],
-    ['KIRI','📜'],['KIRSS','🍒'],['ÕUN','🍎'],['PIRN','🍐'],['ARBUUS','🍉'],['MAASIKAS','🍓'],['MUSTIKAS','🫐'],['MELON','🍈'],['KOOK','🍰'],
-    ['KASS','🐱'],['KOER','🐶'],['LEHM','🐮'],['SIIL','🦔'],['JÄNES','🐰'],['AHV','🐵'],
-    ['AUTO','🚗'],['BUSS','🚌'],['RONG','🚆'],['LAEV','🚢'],['JALGRATAS','🚲'],
-    ['PÄIKE','☀️'],['KUU','🌙'],['TÄHT','⭐'],['LUMI','❄️'],
-    ['LILL','🌸'],['PUU','🌳'],['LEHT','🍃'],
-    ['KELL','⏰'],['TELEFON','📱'],['ELEKTER','⚡']
+    ['KIRI','📜'],['POST','📮'],['PILT','🖼️'],['LAMP','💡'],['KELL','⏰'],
+    ['ÕUN','🍎'],['PIRN','🍐'],['KIRSS','🍒'],['MAASIKAS','🍓'],['MUSTIKAS','🫐'],['ARBUUS','🍉'],['MELON','🍈'],['BANAAN','🍌'],['APELSIN','🍊'],['SIDRUN','🍋'],['VIINAMARI','🍇'],['PÄHKEL','🌰'],['SEEN','🍄'],['KURK','🥒'],['PORGAND','🥕'],['TOMAT','🍅'],['LEIB','🥖'],['SAIA','🥐'],['KOOK','🍰'],['MUNA','🥚'],['PANNKOOK','🥞'],
+    ['KOHV','☕'],['TEE','🍵'],['PIIM','🥛'],['VESI','💧'],
+    ['KASS','🐱'],['KOER','🐶'],['LEHM','🐮'],['SIIL','🦔'],['JÄNES','🐰'],['AHV','🐵'],['KALA','🐟'],['LINNUD','🐦'],['MESILANE','🐝'],['LEPATRIINU','🐞'],['LIBLIKAS','🦋'],['DRAAKON','🐉'],
+    ['AUTO','🚗'],['BUSS','🚌'],['RONG','🚆'],['LAEV','🚢'],['PAAT','🛶'],['RATAS','🚲'],['LENNUK','✈️'],
+    ['MAJA','🏠'],['KOOL','🏫'],['POOD','🏬'],['KLOSS','🧱'],
+    ['PÄIKE','☀️'],['KUU','🌙'],['TÄHT','⭐'],['LUMI','❄️'],['VIHM','🌧️'],['TORM','⛈️'],['TUUL','🌬️'],['VIKERKAAR','🌈'],
+    ['LILL','🌸'],['PUU','🌳'],['LEHT','🍃'],['KAKTUS','🌵'],
+    ['UKS','🚪'],['AKEN','🪟'],['VOODI','🛏️'],['TOOL','🪑'],['DIIVAN','🛋️'],['VANN','🛁'],['DUŠŠ','🚿'],['TUALett','🚽'],
+    ['NUGA','🔪'],['KAHVEL','🍴'],['LUSIKAS','🥄'],['PANN','🍳'],
+    ['KAPP','🗄️'],['KOHVER','🧳'],['KÄÄRID','✂️'],['KLEEBIS','🏷️'],
+    ['TELEFON','📱'],['TELEKA','📺'],['ARVUTI','💻'],['MÄNGUKONSOOL','🎮'],
+    ['KIRJUTUSLAUD','🖊️'],['PLAIIATS','✏️'],['KUMM','🧽'],['LIIM','🧴'],
+    ['KELL','⏰'],['KAARDID','🃏'],['MÄNG','🎲'],['ÕHUPALL','🎈'],
+    ['RAHA','💰'],['VÕTI','🔑'],['LUKK','🔒'],['ELEKTER','⚡'],['PÕLEMA','🔥'],
+    ['KROON','👑'],['MEDAL','🏅'],['KARIKAS','🏆'],
+    ['PÄEV','📅'],['KAART','🗺️'],['KIRI','✉️'],['PAKK','📦']
   ]);
 
   function canonicalEmojiForWord(word, fallback){
@@ -714,6 +725,11 @@
       .map(o => o.i);
     const baseIdx = eligibleIdx.length ? eligibleIdx : levelArr.map((_,i)=>i);
     currentOrder = shuffleArray(baseIdx.slice());
+    // Rotate by a random offset so the first words vary between sessions
+    if(currentOrder.length > 1){
+      const offset = Math.floor(rng() * currentOrder.length);
+      if(offset){ currentOrder = currentOrder.slice(offset).concat(currentOrder.slice(0, offset)); }
+    }
     tasksTotal.textContent = sessionLen();
     // reflect current level in dropdown if present
     const sel = EL('#level-select');
@@ -795,9 +811,11 @@
     });
   }
 
-  // Start
-  // Do not auto-start. Wait for the player to press Alusta.
-  // Show overlay by default (already visible in HTML). If overlay is missing, fallback to starting level.
+  // Start: load large word bank if available, then start level
+  (async function init(){
+    try{ await loadWordBank(); }catch(e){}
+    startLevel();
+  })();
   // Load external word bank then start immediately
   loadWordBank().catch(()=>{});
   initPraiseQueue();
