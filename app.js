@@ -633,21 +633,41 @@
       container.style.transform = 'scale(1)';
       container.style.transformOrigin = 'center center';
       // Try progressively tighter gaps if needed
-      const gapOptions = ['16px','12px','8px','6px','4px','2px'];
+      const gapOptions = ['16px','12px','10px','8px','6px','4px','2px','1px','0px'];
       for(const gap of gapOptions){
         container.style.gap = gap;
         const avail = container.parentElement ? container.parentElement.clientWidth - 24 : container.clientWidth;
         const needed = container.scrollWidth;
         if(needed > 0 && avail > 0){
-          const scale = Math.max(0.35, Math.min(1, avail / needed));
+          const scale = Math.max(0.25, Math.min(1, avail / needed));
           container.style.transform = `scale(${scale})`;
           // if it fits without hitting min scale and not overflowing, stop early
-          if(scale > 0.36 && needed * scale <= avail) break;
+          if(needed * scale <= avail) break;
         }
       }
     }catch(e){ /* no-op */ }
   }
-  window.addEventListener('resize', ()=>{ try{ fitWordToContainer(); }catch{} });
+  window.addEventListener('resize', ()=>{ try{ fitWordToContainer(); fitChoicesWords(); }catch{} });
+
+  // Fit long words inside the three choice boxes by scaling each .word element
+  function fitChoicesWords(){
+    try{
+      const nodes = ELS('.choice .word');
+      nodes.forEach(node => {
+        node.style.transformOrigin = 'center center';
+        node.style.transform = 'scale(1)';
+        node.style.whiteSpace = 'nowrap';
+        const parent = node.parentElement;
+        if(!parent) return;
+        const avail = parent.clientWidth - 16;
+        const needed = node.scrollWidth;
+        if(needed > avail && avail > 0){
+          const s = Math.max(0.6, Math.min(1, avail / needed));
+          node.style.transform = `scale(${s})`;
+        }
+      });
+    }catch{}
+  }
 
   function renderChoicesEmoji(t, prebuilt){
     choices.innerHTML = '';
@@ -675,6 +695,7 @@
     requestAnimationFrame(()=>{
       created.forEach((el,i)=> setTimeout(()=> el.classList.add('show'), 40 * i));
     });
+    fitChoicesWords();
   }
 
   function buildWordChoicesForTask(t){
@@ -856,26 +877,20 @@
   function levelComplete(){
     toast(`Tase ${levelIndex+1} läbitud! Õigeid: ${correct}/${sessionLen()}`);
     // progress removed
-    // Järgmine tase kui on
-    if(levelIndex < LEVELS.length-1){
-      levelIndex++;
-      startLevel();
+    // Ära vaheta taset automaatselt; jäta valik mängijale
+    const over = EL('#gameover');
+    const title = EL('#gameover-title');
+    const text = EL('#gameover-text');
+    if(over){
+      if(title) title.textContent = 'Tase läbitud!';
+      if(text) text.textContent = `Õigeid vastuseid: ${correct}. Vali ise, kas mängid sama taset uuesti või vahetad taset.`;
+      over.style.display = 'flex';
+      const btnAgain = EL('#btn-again');
+      const btnQuit = EL('#btn-quit');
+      if(btnAgain){ btnAgain.onclick = ()=>{ over.style.display='none'; resetSession(); }; }
+      if(btnQuit){ btnQuit.onclick = ()=>{ text.textContent = 'Aitäh mängimast! Kohtumiseni!'; }; }
     } else {
-      // Show game over overlay
-      const over = EL('#gameover');
-      const title = EL('#gameover-title');
-      const text = EL('#gameover-text');
-      if(over){
-        if(title) title.textContent = 'Suurepärane!';
-        if(text) text.textContent = `Kõik tasemed läbitud! Õigeid vastuseid: ${correct}. Soovid mängida uuesti?`;
-        over.style.display = 'flex';
-        const btnAgain = EL('#btn-again');
-        const btnQuit = EL('#btn-quit');
-        if(btnAgain){ btnAgain.onclick = ()=>{ over.style.display='none'; resetSession(); }; }
-        if(btnQuit){ btnQuit.onclick = ()=>{ text.textContent = 'Aitäh mängimast! Kohtumiseni!'; }; }
-      } else {
-        toast('🎉 Kõik tasemed läbitud!');
-      }
+      toast('🎉 Tase läbitud!');
     }
   }
 
