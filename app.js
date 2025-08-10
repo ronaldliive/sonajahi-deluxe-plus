@@ -680,18 +680,23 @@
   function buildWordChoicesForTask(t){
     const correct = (t.word||'').toUpperCase();
     const levelTasks = LEVELS[levelIndex] || [];
-    // Build pool of distractor words (unique, not the same as correct)
-    const pool = levelTasks
-      .map(x => (x.word||'').toUpperCase())
-      .filter(w => w && w !== correct);
-    // Get two unique random distractors
-    const picks = new Set();
-    while(picks.size < 2 && pool.length){
+    // Unique pool excluding the correct word
+    const pool = Array.from(new Set(
+      levelTasks.map(x => (x.word||'').toUpperCase()).filter(w => w && w !== correct)
+    ));
+    const distractors = [];
+    // Prefer random unique distractors from pool
+    while(distractors.length < 2 && pool.length){
       const i = Math.floor(Math.random()*pool.length);
-      picks.add(pool.splice(i,1)[0]);
+      const w = pool.splice(i,1)[0];
+      if(w && !distractors.includes(w)) distractors.push(w);
     }
-    const distractors = Array.from(picks);
-    while(distractors.length < 2){ distractors.push('XXXX'); }
+    // If pool was too small, fallback to a safe common list
+    const FALLBACK = ['KASS','KOER','MAJA','AUTO','KALA','LIND','PÄIKE','PUU'];
+    while(distractors.length < 2){
+      const w = FALLBACK[Math.floor(Math.random()*FALLBACK.length)];
+      if(w !== correct && !distractors.includes(w)) distractors.push(w);
+    }
     return [correct, ...distractors];
   }
 
@@ -708,7 +713,10 @@
       c.className = 'choice enter ripple';
       c.setAttribute('type','button');
       c.setAttribute('aria-label', `Valik ${pos+1}`);
-      c.innerHTML = `<div class="word">${word}</div>`;
+      const inner = document.createElement('div');
+      inner.className = 'word';
+      inner.textContent = word;
+      c.appendChild(inner);
       const isCorrect = (pos === correctIndex);
       c.addEventListener('click', () => onChoose(isCorrect, c));
       choices.appendChild(c);
@@ -726,7 +734,13 @@
     coinCount.textContent = coins;
     stickerCount.textContent = stickers;
     // progress removed
-    if(feedback){ feedback.className = 'feedback'; feedback.textContent = 'Vali õige pilt!'; }
+    if(feedback){
+      feedback.className = 'feedback';
+      const msg = currentRoundType === 'word_to_emoji' ? 'Vali õige pilt!'
+        : currentRoundType === 'emoji_to_word' ? 'Vali õige sõna!'
+        : 'Vali õige sõna!';
+      feedback.textContent = msg;
+    }
   }
 
   function renderDots(){
