@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sonajahi-cache-v15';
+const CACHE_NAME = 'sonajahi-cache-v16';
 const ASSETS = [
   './',
   './index.html',
@@ -12,9 +12,12 @@ const ASSETS = [
   './words_algaja_3.json',
   './words_algaja_4.json',
   './words_algaja_5.json',
+  './words_algaja_6.json',
+  './words_algaja_7.json',
   './words_edasijoudnu_1.json',
   './words_edasijoudnu_2.json',
   './words_edasijoudnu_3.json',
+  './words_edasijoudnu_4.json',
   './words_ekspert_1.json',
   './words_ekspert_2.json',
   './words_ekspert_3.json'

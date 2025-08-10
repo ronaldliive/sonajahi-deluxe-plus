@@ -421,6 +421,13 @@
     return praiseQueue.shift();
   }
 
+  // Short encouragements for wrong answers (kid-friendly, positive)
+  const ENCOURAGES = [
+    'Pole hullu, proovi veel!', 'Tubli katse!', 'Lähme edasi!', 'Sa saad hakkama!', 'Hea püüe!',
+    'Veel natuke ja õnnestub!', 'Ära anna alla!', 'Proovime uuesti!', 'Suurepärane püüdlus!', 'Kohe tuleb välja!'
+  ];
+  function encourage(){ return ENCOURAGES[Math.floor(Math.random()*ENCOURAGES.length)]; }
+
   function pickTask(){
     const levelTasks = LEVELS[levelIndex];
     const idx = currentOrder[taskIndex] ?? Math.min(taskIndex, levelTasks.length-1);
@@ -761,7 +768,7 @@
           else { ansCorrectText.textContent = ''; ansCorrectText.style.display = 'none'; }
         }
         ansOverlay.style.display = 'flex';
-        // TTS: correct => word then praise; wrong => 'Proovi uuesti' then word
+        // TTS: correct => word then praise; wrong => word then short encouragement
         if(isCorrect){
           const say = (typeof window !== 'undefined' && window.lastPraise) ? window.lastPraise : undefined;
           const praiseText = say || 'Tubli!';
@@ -769,8 +776,9 @@
             .then(()=> speakText(praiseText.toLowerCase(), 'mari', 0.95))
             .catch(()=>{});
         } else {
-          speakText('Proovi uuesti', 'mari', 0.95)
-            .then(()=> correctWord ? speakText(correctWord, 'mari', 0.9) : Promise.resolve())
+          const after = encourage();
+          speakText(correctWord, 'mari', 0.9)
+            .then(()=> speakText(after.toLowerCase(), 'mari', 0.95))
             .catch(()=>{});
         }
       }
