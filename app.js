@@ -236,11 +236,20 @@
   const btnSkip = EL('#btn-skip');
   const btnNew = EL('#btn-new');
   const btnSay = EL('#btn-say');
+  // Answer overlay elements
+  const ansOverlay = EL('#answer-overlay');
+  const ansEmoji = EL('#answer-emoji');
+  const ansTitle = EL('#answer-title');
+  const ansSub = EL('#answer-sub');
+  const ansCounter = EL('#answer-counter');
   // Welcome overlay removed; inline level selection is used
   const isIOS = /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   let audioUnlocked = false;
 
-  function sessionLen(){ return currentOrder.length || LEVELS[levelIndex].length; }
+  function sessionLen(){
+    const total = currentOrder.length || LEVELS[levelIndex].length;
+    return Math.min(10, total);
+  }
   tasksTotal.textContent = sessionLen();
 
   // Filter: Beginner level should only contain short words (<=5 letters)
@@ -729,14 +738,27 @@
       results.push(false);
     }
 
+    // Show per-answer overlay with counter (X / 10)
+    try{
+      if(ansOverlay){
+        const cur = Math.min(results.length, sessionLen());
+        if(ansEmoji) ansEmoji.textContent = isCorrect ? '🎉' : '❌';
+        if(ansTitle) ansTitle.textContent = isCorrect ? 'Tubli!' : 'Õige oli muu';
+        if(ansSub) ansSub.textContent = isCorrect ? 'Õige vastus' : 'Vale vastus';
+        if(ansCounter) ansCounter.textContent = `${cur} / ${sessionLen()}`;
+        ansOverlay.style.display = 'flex';
+      }
+    }catch{}
+
     taskIndex++;
     setTimeout(() => {
+      if(ansOverlay){ ansOverlay.style.display = 'none'; }
       if(taskIndex >= sessionLen()){
         levelComplete();
       } else {
         renderTask();
       }
-    }, 650);
+    }, isCorrect ? 900 : 900);
   }
 
   function levelComplete(){
