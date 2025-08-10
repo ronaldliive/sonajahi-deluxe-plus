@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <div id="floaters" aria-hidden="true"></div>
   <main class="app shell" role="main">
     <!-- Top App Bar -->
     <header class="appbar">
@@ -77,6 +78,9 @@
         <h2 class="overlay-title" id="answer-title">Tubli!</h2>
         <p class="overlay-text tiny" id="answer-sub">Õige vastus</p>
         <div class="counter" id="answer-counter">1 / 10</div>
+        <div class="overlay-actions" style="margin-top:14px">
+          <button id="answer-next" class="btn btn-primary" type="button">JÄTKA</button>
+        </div>
       </div>
     </section>
 

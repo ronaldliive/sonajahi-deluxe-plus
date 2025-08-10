@@ -218,6 +218,8 @@
   let results = []; // per-task result: true/false/null
   let levelIndex = 0; // 0..4
   let currentOrder = [];
+  let currentRoundType = null; // 'word_to_emoji' or 'emoji_to_word'
+  let proceedHandler = null; // overlay continue
 
   // Elements
   const tasksCount = EL('#tasks-count');
@@ -233,6 +235,7 @@
   const pillWrong = EL('#pill-wrong');
   const letters = EL('#letters');
   const choices = EL('#choices');
+  const floaters = EL('#floaters');
   const btnSkip = EL('#btn-skip');
   const btnNew = EL('#btn-new');
   const btnSay = EL('#btn-say');
@@ -242,6 +245,7 @@
   const ansTitle = EL('#answer-title');
   const ansSub = EL('#answer-sub');
   const ansCounter = EL('#answer-counter');
+  const ansNext = EL('#answer-next');
   // Welcome overlay removed; inline level selection is used
   const isIOS = /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   let audioUnlocked = false;
@@ -514,6 +518,7 @@
     letters.innerHTML = '';
     const isEmojiChoiceRound = (roundCounter % 2 === 0); // strictly alternate
     if(isEmojiChoiceRound){
+      currentRoundType = 'word_to_emoji';
       // If this task's correct emoji equals banned one, skip forward to keep the game from being trivial
       let guard=0; let built=[]; let localT=t;
       while(guard<6){
@@ -546,6 +551,7 @@
       banNextEmoji = canonicalEmojiForWord(lastWordShown, null) || null;
       roundCounter++;
     } else {
+      currentRoundType = 'emoji_to_word';
       // Word-choice round: show the emoji (must exist), pick the correct WORD.
       // Find the next suitable task with a valid, unseen, and not-banned emoji without breaking alternation
       let attempts = 0; let emoji = canonicalEmojiForWord(t.word, null);
@@ -728,6 +734,7 @@
       if(feedback){ feedback.className = 'feedback good'; feedback.textContent = say; }
       animatePill(pillCorrect, 'bump');
       results.push(true);
+      try{ spawnBurstAt(chosen); }catch{}
     } else {
       haptic('error');
       toast('❌ Proovi uuesti!');
@@ -738,27 +745,45 @@
       results.push(false);
     }
 
-    // Show per-answer overlay with counter (X / 10)
+    // Determine correct word for TTS in overlay
+    const correctWord = (function(){
+      if(currentRoundType === 'word_to_emoji') return lastWordShown;
+      if(currentTask && currentTask.word) return (currentTask.word||'').toUpperCase();
+      return lastWordShown || currentWord();
+    })();
+
+    // Show per-answer overlay with counter (X / 10) and wait for tap
     try{
       if(ansOverlay){
         const cur = Math.min(results.length, sessionLen());
         if(ansEmoji) ansEmoji.textContent = isCorrect ? '🎉' : '❌';
-        if(ansTitle) ansTitle.textContent = isCorrect ? 'Tubli!' : 'Õige oli muu';
+        if(ansTitle) ansTitle.textContent = isCorrect ? 'Tubli!' : 'Proovi järgmine!';
         if(ansSub) ansSub.textContent = isCorrect ? 'Õige vastus' : 'Vale vastus';
         if(ansCounter) ansCounter.textContent = `${cur} / ${sessionLen()}`;
         ansOverlay.style.display = 'flex';
+        // Speak correct word softly
+        if(correctWord){ speakText(correctWord, 'mari', 0.9).catch(()=>{}); }
       }
     }catch{}
 
-    taskIndex++;
-    setTimeout(() => {
+    // Proceed only on JÄTKA tap
+    const goNext = ()=>{
       if(ansOverlay){ ansOverlay.style.display = 'none'; }
+      if(proceedHandler){ ansNext?.removeEventListener('click', proceedHandler); proceedHandler=null; }
+      taskIndex++;
       if(taskIndex >= sessionLen()){
         levelComplete();
       } else {
         renderTask();
       }
-    }, isCorrect ? 900 : 900);
+    };
+    if(ansNext){
+      proceedHandler = goNext;
+      ansNext.addEventListener('click', proceedHandler, { once:true });
+    } else {
+      // safety fallback
+      setTimeout(goNext, 900);
+    }
   }
 
   function levelComplete(){
@@ -830,6 +855,48 @@
     toast(`Tase ${levelIndex+1}: Eesmärk – ${r.icon} ${r.text}`);
     if(feedback){ feedback.className = 'feedback'; feedback.textContent = `Tase ${levelIndex+1}. Eesmärk: ${r.icon} ${r.text}`; }
     renderTask();
+    // start ambient floaters
+    try{ startFloaters(); }catch{}
+  }
+
+  // --- Delightful moving elements ('floaters') ---
+  function rand(min,max){ return Math.random()*(max-min)+min; }
+  function spawnFloater({emoji='✨', x=null, y=null, size=null, dur=null}){
+    if(!floaters) return;
+    const el = document.createElement('div');
+    el.className = 'floater';
+    el.textContent = emoji;
+    const s = size || rand(18,36);
+    const left = (x!=null? x : rand(0, window.innerWidth-20));
+    const top = (y!=null? y : rand(0, window.innerHeight-20));
+    el.style.left = left+ 'px';
+    el.style.top = top + 'px';
+    el.style.fontSize = s + 'px';
+    el.style.animationDuration = (dur || rand(6,12)) + 's';
+    floaters.appendChild(el);
+    setTimeout(()=>{ el.remove(); }, 15000);
+  }
+  function startFloaters(){
+    if(!floaters) return;
+    if(floaters._loop) return;
+    const loop = ()=>{
+      if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches){ return; }
+      const pool = ['✨','🌟','🫧','🎈','💫','⭐','🎉'];
+      spawnFloater({ emoji: pool[Math.floor(Math.random()*pool.length)] });
+      floaters._timer = setTimeout(loop, rand(1200, 2200));
+    };
+    floaters._loop = true;
+    loop();
+  }
+  function spawnBurstAt(target){
+    if(!floaters) return;
+    const rect = target.getBoundingClientRect();
+    const cx = rect.left + rect.width/2;
+    const cy = rect.top + rect.height/2;
+    const pool = ['✨','🌟','💥','💫','🎉'];
+    for(let i=0;i<6;i++){
+      setTimeout(()=> spawnFloater({ emoji: pool[i%pool.length], x: cx+rand(-10,10), y: cy+rand(-10,10), size: rand(18,34), dur: rand(4,8) }), i*60);
+    }
   }
 
   // Events
