@@ -186,9 +186,10 @@
 
   function toTask(w){
     const word = (w||'').toUpperCase();
+    if(!word) return null;
     const emo = canonicalEmojiForWord(word, null);
-    if(!emo) return null; // only include words with a known emoji mapping
-    return { word, emojis: [emo], answer: 0 };
+    // Include all words; emoji is optional and only used for emoji rounds
+    return { word, emojis: emo ? [emo] : [], answer: 0 };
   }
 
   async function mergeWordBank(data){
@@ -718,11 +719,11 @@
       haptic('success');
       correct++; coins += 1;
       if(correct % 4 === 0){ stickers += 1; toast('🎉 Saad kleepsu!'); }
-      toast('✅ '+praise());
+      const say = praise();
+      try{ window.lastPraise = say; }catch{}
+      toast('✅ '+say);
       playChime();
       confetti(chosen);
-      const say = praise();
-      speakText(say.toLowerCase(), 'mari', 0.95).catch(()=>{});
       if(feedback){ feedback.className = 'feedback good'; feedback.textContent = say; }
       animatePill(pillCorrect, 'bump');
       results.push(true);
@@ -731,7 +732,6 @@
       haptic('error');
       toast('❌ Proovi uuesti!');
       wrong++;
-      speakText('Proovi uuesti', 'mari', 0.95).catch(()=>{});
       if(feedback){ feedback.className = 'feedback bad'; feedback.textContent = 'Vale vastus. Proovi järgmine!'; }
       animatePill(pillWrong, 'shake');
       results.push(false);
@@ -753,25 +753,33 @@
         if(ansSub) ansSub.textContent = isCorrect ? 'Õige vastus' : 'Vale vastus';
         if(ansCounter) ansCounter.textContent = `${cur} / ${sessionLen()}`;
         const ansCorrectText = EL('#answer-correct-text');
+        const ansWord = EL('#answer-word');
+        if(ansWord){ ansWord.textContent = (correctWord||'') ? String(correctWord).toUpperCase() : ''; }
         if(ansCorrectText){
-          if(!isCorrect && correctWord){
-            ansCorrectText.textContent = `Õige sõna oli: ${correctWord}`;
-            ansCorrectText.style.display = '';
-          } else {
-            ansCorrectText.textContent = '';
-            ansCorrectText.style.display = 'none';
-          }
+          const label = isCorrect ? 'Sõna' : 'Õige sõna oli';
+          if(correctWord){ ansCorrectText.textContent = `${label}: ${correctWord}`; ansCorrectText.style.display = ''; }
+          else { ansCorrectText.textContent = ''; ansCorrectText.style.display = 'none'; }
         }
         ansOverlay.style.display = 'flex';
-        // Speak correct word softly
-        if(correctWord){ speakText(correctWord, 'mari', 0.9).catch(()=>{}); }
+        // TTS: correct => word then praise; wrong => 'Proovi uuesti' then word
+        if(isCorrect){
+          const say = (typeof window !== 'undefined' && window.lastPraise) ? window.lastPraise : undefined;
+          const praiseText = say || 'Tubli!';
+          speakText(correctWord, 'mari', 0.9)
+            .then(()=> speakText(praiseText.toLowerCase(), 'mari', 0.95))
+            .catch(()=>{});
+        } else {
+          speakText('Proovi uuesti', 'mari', 0.95)
+            .then(()=> correctWord ? speakText(correctWord, 'mari', 0.9) : Promise.resolve())
+            .catch(()=>{});
+        }
       }
     }catch{}
 
     // Proceed only on JÄTKA tap
     const goNext = ()=>{
       if(ansOverlay){ ansOverlay.style.display = 'none'; }
-      if(proceedHandler){ ansNext?.removeEventListener('click', proceedHandler); proceedHandler=null; }
+      if(proceedHandler){ ansNext?.removeEventListener('click', proceedHandler); ansOverlay?.removeEventListener('click', proceedHandler); proceedHandler=null; }
       taskIndex++;
       if(taskIndex >= sessionLen()){
         levelComplete();
@@ -781,10 +789,14 @@
     };
     if(ansNext){
       proceedHandler = goNext;
-      ansNext.addEventListener('click', proceedHandler, { once:true });
+      // Delay enabling taps briefly to avoid accidental double-advance
+      setTimeout(()=>{
+        ansNext.addEventListener('click', proceedHandler, { once:true });
+        // Also allow tapping anywhere on overlay to continue
+        ansOverlay?.addEventListener('click', proceedHandler, { once:true });
+      }, 250);
     } else {
-      // safety fallback
-      setTimeout(goNext, 900);
+      // no auto-dismiss fallback; require user action
     }
   }
 
