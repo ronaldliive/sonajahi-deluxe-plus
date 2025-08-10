@@ -8,10 +8,7 @@
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
 }
-.app, #floaters{ position:relative }
-#floaters{ position:fixed; inset:0; pointer-events:none; z-index:2 }
-.floater{ position:absolute; will-change: transform, opacity; animation: floaty linear infinite; opacity:.9; filter: drop-shadow(0 2px 0 rgba(0,0,0,.25)); }
-@keyframes floaty{ 0%{ transform: translateY(0) translateX(0) rotate(0deg); opacity:.0 } 10%{ opacity:.9 } 50%{ transform: translateY(-40px) translateX(10px) rotate(8deg) } 100%{ transform: translateY(-90px) translateX(-6px) rotate(-6deg); opacity:0 } }
+.app{ position:relative }
 /* Big word in answer overlay */
 .answer-card .answer-word{
   font-weight: 800;

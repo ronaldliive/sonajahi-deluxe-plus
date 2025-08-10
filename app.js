@@ -236,7 +236,7 @@
   const pillWrong = EL('#pill-wrong');
   const letters = EL('#letters');
   const choices = EL('#choices');
-  const floaters = EL('#floaters');
+  const floaters = null; // floaters disabled
   const btnSkip = EL('#btn-skip');
   const btnNew = EL('#btn-new');
   const btnSay = EL('#btn-say');
@@ -560,6 +560,7 @@
       roundCounter++;
     } else if(phase === 1){
       currentRoundType = 'emoji_to_word';
+      pauseFloaters();
       // Word-choice round: show the emoji (must exist), pick the correct WORD.
       // Find the next suitable task with a valid, unseen, and not-banned emoji without breaking alternation
       let attempts = 0; let emoji = canonicalEmojiForWord(t.word, null);
@@ -587,6 +588,36 @@
       // after emoji->word round, clear ban if it matched the shown emoji
       const justShown = emoji;
       if(banNextEmoji && justShown === banNextEmoji){ banNextEmoji = null; }
+      roundCounter++;
+    } else { // phase === 2
+      currentRoundType = 'word_to_word';
+      resumeFloaters();
+      // Ensure we have a valid task with a word
+      let guard = 0;
+      while(guard < 6 && (!t || !t.word)){
+        taskIndex++;
+        if(taskIndex >= currentOrder.length){ finishLevel(); return; }
+        t = pickTask();
+        currentTask = t;
+        guard++;
+      }
+      if(!t || !t.word){ taskIndex++; roundCounter++; return; }
+      // mark shown word as seen
+      seenWords.add((t.word||'').toUpperCase());
+      // show the word as letters
+      letters.innerHTML = '';
+      const letterEls = [];
+      (t.word||'').toUpperCase().split('').forEach(ch => {
+        const d = document.createElement('div');
+        d.className = 'letter';
+        d.textContent = ch;
+        letters.appendChild(d);
+        letterEls.push(d);
+      });
+      fitWordToContainer();
+      renderChoicesWords(t);
+      letterEls.forEach((el,i)=> setTimeout(()=> el.classList.add('pop'), 25 * i));
+      lastWordShown = (t.word||'').toUpperCase();
       roundCounter++;
     }
     renderHUD();
@@ -772,12 +803,12 @@
         if(isCorrect){
           const say = (typeof window !== 'undefined' && window.lastPraise) ? window.lastPraise : undefined;
           const praiseText = say || 'Tubli!';
-          speakText(correctWord, 'mari', 0.9)
+          speakText((correctWord||'').toLowerCase(), 'mari', 0.9)
             .then(()=> speakText(praiseText.toLowerCase(), 'mari', 0.95))
             .catch(()=>{});
         } else {
           const after = encourage();
-          speakText(correctWord, 'mari', 0.9)
+          speakText((correctWord||'').toLowerCase(), 'mari', 0.9)
             .then(()=> speakText(after.toLowerCase(), 'mari', 0.95))
             .catch(()=>{});
         }
@@ -877,39 +908,15 @@
     toast(`Tase ${levelIndex+1}: Eesmärk – ${r.icon} ${r.text}`);
     if(feedback){ feedback.className = 'feedback'; feedback.textContent = `Tase ${levelIndex+1}. Eesmärk: ${r.icon} ${r.text}`; }
     renderTask();
-    // start ambient floaters
-    try{ startFloaters(); }catch{}
+    // floaters disabled
   }
 
   // --- Delightful moving elements ('floaters') ---
   function rand(min,max){ return Math.random()*(max-min)+min; }
-  function spawnFloater({emoji='✨', x=null, y=null, size=null, dur=null}){
-    if(!floaters) return;
-    const el = document.createElement('div');
-    el.className = 'floater';
-    el.textContent = emoji;
-    const s = size || rand(18,36);
-    const left = (x!=null? x : rand(0, window.innerWidth-20));
-    const top = (y!=null? y : rand(0, window.innerHeight-20));
-    el.style.left = left+ 'px';
-    el.style.top = top + 'px';
-    el.style.fontSize = s + 'px';
-    el.style.animationDuration = (dur || rand(6,12)) + 's';
-    floaters.appendChild(el);
-    setTimeout(()=>{ el.remove(); }, 15000);
-  }
-  function startFloaters(){
-    if(!floaters) return;
-    if(floaters._loop) return;
-    const loop = ()=>{
-      if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches){ return; }
-      const pool = ['✨','🌟','🫧','🎈','💫','⭐','🎉'];
-      spawnFloater({ emoji: pool[Math.floor(Math.random()*pool.length)] });
-      floaters._timer = setTimeout(loop, rand(1200, 2200));
-    };
-    floaters._loop = true;
-    loop();
-  }
+  function spawnFloater(){ /* disabled */ }
+  function startFloaters(){ /* disabled */ }
+  function pauseFloaters(){ /* disabled */ }
+  function resumeFloaters(){ /* disabled */ }
   function spawnBurstAt(target){
     if(!floaters) return;
     const rect = target.getBoundingClientRect();
