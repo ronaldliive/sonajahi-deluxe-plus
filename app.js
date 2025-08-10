@@ -516,8 +516,8 @@
     }
     currentTask = t;
     letters.innerHTML = '';
-    const isEmojiChoiceRound = (roundCounter % 2 === 0); // strictly alternate
-    if(isEmojiChoiceRound){
+    const phase = roundCounter % 3; // 0: word->emoji, 1: emoji->word, 2: word->word
+    if(phase === 0){
       currentRoundType = 'word_to_emoji';
       // If this task's correct emoji equals banned one, skip forward to keep the game from being trivial
       let guard=0; let built=[]; let localT=t;
@@ -550,7 +550,7 @@
       lastWordShown = (localT.word||'').toUpperCase();
       banNextEmoji = canonicalEmojiForWord(lastWordShown, null) || null;
       roundCounter++;
-    } else {
+    } else if(phase === 1){
       currentRoundType = 'emoji_to_word';
       // Word-choice round: show the emoji (must exist), pick the correct WORD.
       // Find the next suitable task with a valid, unseen, and not-banned emoji without breaking alternation
@@ -563,16 +563,8 @@
         emoji = canonicalEmojiForWord(t.word, null);
         attempts++;
       }
-      if(!emoji || emoji === '❓'){
-        // Could not find a mapped emoji; switch to showing letters this round to avoid blocking
-        letters.innerHTML = '';
-        const letterEls = [];
-        (t.word||'').toUpperCase().split('').forEach(ch=>{
-          const d = document.createElement('div'); d.className='letter'; d.textContent=ch; letters.appendChild(d); letterEls.push(d);
-        });
-        fitWordToContainer();
-        renderChoicesEmoji(t);
-        letterEls.forEach((el,i)=> setTimeout(()=> el.classList.add('pop'), 25 * i));
+      if(!emoji || emoji==='❓'){ // no valid emoji -> skip to next
+        taskIndex++;
         roundCounter++;
         return;
       }
@@ -652,7 +644,7 @@
     // Build pool of distractor words (unique, not the same as correct)
     const pool = levelTasks
       .map(x => (x.word||'').toUpperCase())
-      .filter(w => w && w !== correct && !!canonicalEmojiForWord(w, null));
+      .filter(w => w && w !== correct);
     // Get two unique random distractors
     const picks = new Set();
     while(picks.size < 2 && pool.length){
@@ -760,6 +752,16 @@
         if(ansTitle) ansTitle.textContent = isCorrect ? 'Tubli!' : 'Proovi järgmine!';
         if(ansSub) ansSub.textContent = isCorrect ? 'Õige vastus' : 'Vale vastus';
         if(ansCounter) ansCounter.textContent = `${cur} / ${sessionLen()}`;
+        const ansCorrectText = EL('#answer-correct-text');
+        if(ansCorrectText){
+          if(!isCorrect && correctWord){
+            ansCorrectText.textContent = `Õige sõna oli: ${correctWord}`;
+            ansCorrectText.style.display = '';
+          } else {
+            ansCorrectText.textContent = '';
+            ansCorrectText.style.display = 'none';
+          }
+        }
         ansOverlay.style.display = 'flex';
         // Speak correct word softly
         if(correctWord){ speakText(correctWord, 'mari', 0.9).catch(()=>{}); }
