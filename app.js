@@ -115,14 +115,16 @@
     }catch{ return Math.random(); }
   }
 
-  // Find a later task with a valid emoji mapping for emoji->word phase and swap it in
-  function findAndSwapValidEmojiTask(ban){
+  // Find a later task with a valid emoji mapping for emoji phases and swap it in
+  // If allowReuse=true, we ignore the seenEmojis restriction to avoid starving emoji phases
+  function findAndSwapValidEmojiTask(ban, allowReuse=false){
     const levelTasks = LEVELS[levelIndex] || [];
     for(let i = taskIndex; i < currentOrder.length; i++){
       const idx = currentOrder[i];
       const cand = levelTasks[idx];
       const emo = canonicalEmojiForWord(cand && cand.word, null);
-      if(emo && emo !== '❓' && !seenEmojis.has(emo) && (!ban || emo !== ban)){
+      const alreadySeen = seenEmojis.has(emo);
+      if(emo && emo !== '❓' && (!alreadySeen || allowReuse) && (!ban || emo !== ban)){
         if(i !== taskIndex){
           const tmp = currentOrder[taskIndex];
           currentOrder[taskIndex] = currentOrder[i];
@@ -599,14 +601,23 @@
       currentRoundType = 'word_to_emoji';
       // Find a suitable task without consuming taskIndex; swap in place if needed
       let built=[]; let localT=t;
-      const swapped0 = findAndSwapValidEmojiTask(banNextEmoji);
+      let swapped0 = findAndSwapValidEmojiTask(banNextEmoji, false);
+      if(!swapped0){ swapped0 = findAndSwapValidEmojiTask(banNextEmoji, true); }
       if(swapped0){ localT = swapped0; currentTask = localT; }
       built = (buildChoicesForTask(localT, banNextEmoji) || []).filter(e=> e && typeof e === 'string');
       if(!built.length){
-        // No valid emoji choices -> move to next phase without consuming a task
-        roundCounter++;
-        renderTask();
-        return;
+        // Try once more ignoring seenEmojis by rebuilding choices with swapped task
+        const retry = findAndSwapValidEmojiTask(banNextEmoji, true);
+        if(retry){
+          localT = retry; currentTask = localT;
+          built = (buildChoicesForTask(localT, banNextEmoji) || []).filter(e=> e && typeof e === 'string');
+        }
+        if(!built.length){
+          // Still no valid emoji choices -> move to next phase without consuming a task
+          roundCounter++;
+          renderTask();
+          return;
+        }
       }
       // mark actually shown word as seen
       if(localT && localT.word){ seenWords.add((localT.word||'').toUpperCase()); }
@@ -635,7 +646,8 @@
       // Swap in a later suitable task with a valid, unseen, and not-banned emoji (do NOT consume taskIndex)
       let emoji = canonicalEmojiForWord(t.word, null);
       if(!emoji || emoji === '❓' || seenEmojis.has(emoji) || (banNextEmoji && emoji === banNextEmoji)){
-        const swapped = findAndSwapValidEmojiTask(banNextEmoji);
+        let swapped = findAndSwapValidEmojiTask(banNextEmoji, false);
+        if(!swapped){ swapped = findAndSwapValidEmojiTask(banNextEmoji, true); }
         if(swapped){ t = swapped; currentTask = t; emoji = canonicalEmojiForWord(t.word, null); }
       }
       if(!emoji || emoji==='❓'){ // no valid emoji -> skip to next phase without consuming a task
