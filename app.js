@@ -266,7 +266,10 @@
   const ansSub = EL('#answer-sub');
   const ansCounter = EL('#answer-counter');
   const ansNext = EL('#answer-next');
-  // Welcome overlay removed; inline level selection is used
+  // Start overlay elements
+  const startOverlay = EL('#start-overlay');
+  const startClose = EL('#start-overlay-close');
+  // Welcome overlay removed earlier, now replaced by explicit start overlay
   const isIOS = /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   let audioUnlocked = false;
 
@@ -514,16 +517,17 @@
     try{
       // Only use canonical mapping; if missing, abort to avoid placeholder icons
       const correct = canonicalEmojiForWord(t.word, null);
-      if(!correct) return [];
+      if(!correct || typeof correct !== 'string') return [];
       if(banEmoji && correct === banEmoji) return []; // force caller to pick another task
       const cat = EMOJI_CATEGORY.get(correct) || 'object';
-      const distractors = randomFromCategories(cat, 2).filter(d => d !== correct && d !== banEmoji);
+      const distractors = randomFromCategories(cat, 2).filter(d => d && typeof d === 'string' && d !== correct && d !== banEmoji);
       while(distractors.length < 2){
         const all = Array.from(EMOJI_CATEGORY.keys());
         const pick = all[Math.floor(Math.random()*all.length)];
-        if(pick !== correct && pick !== banEmoji && !distractors.includes(pick)) distractors.push(pick);
+        if(pick && typeof pick === 'string' && pick !== correct && pick !== banEmoji && !distractors.includes(pick)) distractors.push(pick);
       }
-      return [correct, ...distractors];
+      const out = [correct, ...distractors].filter(e => e && typeof e === 'string');
+      return out.length === 3 ? out : [];
     }catch(e){
       // Fallback to provided task emojis if something goes wrong
       return [];
@@ -685,13 +689,14 @@
 
   function renderChoicesEmoji(t, prebuilt){
     choices.innerHTML = '';
-    let built = Array.isArray(prebuilt) && prebuilt.length ? prebuilt.slice(0,3) : [];
+    const isValid = (e)=> typeof e === 'string' && e.trim() && e !== 'undefined';
+    let built = Array.isArray(prebuilt) && prebuilt.length ? prebuilt.filter(isValid).slice(0,3) : [];
     if(!built.length){
-      try{ built = buildChoicesForTask(t, banNextEmoji) || []; }catch{ built = []; }
+      try{ built = (buildChoicesForTask(t, banNextEmoji) || []).filter(isValid).slice(0,3); }catch{ built = []; }
     }
-    if(!built.length && Array.isArray(t.emojis)) built = t.emojis.slice(0,3).filter(Boolean);
+    if(!built.length && Array.isArray(t.emojis)) built = t.emojis.filter(isValid).slice(0,3);
     // validate — if invalid, do not consume a turn; just bail to let caller pick another phase/word
-    if(!built || built.length < 3 || built.some(x => !x)){
+    if(!built || built.length < 3 || built.some(x => !isValid(x))){
       // Let renderTask() pick a different item for this phase without moving taskIndex
       // Move to next phase to avoid getting stuck
       roundCounter++;
@@ -707,7 +712,10 @@
       c.className = 'choice enter ripple';
       c.setAttribute('type','button');
       c.setAttribute('aria-label', `Valik ${pos+1}`);
-      c.innerHTML = `<div class="emoji">${emo}</div>`;
+      const e = document.createElement('div');
+      e.className = 'emoji';
+      e.textContent = isValid(emo) ? emo : '';
+      c.appendChild(e);
       const isCorrect = (pos === correctIndex);
       c.addEventListener('click', () => onChoose(isCorrect, c));
       choices.appendChild(c);
@@ -955,11 +963,41 @@
   }
 
   function resetSession(){
-    levelIndex = 0;
+    // Return to start overlay instead of auto-starting level 0
     seenWords.clear();
     seenEmojis.clear();
     roundCounter = 0;
-    startLevel();
+    showStartOverlay();
+  }
+
+  function showStartOverlay(){
+    try{
+      if(!startOverlay) { startLevel(); return; }
+      // Show overlay
+      startOverlay.style.display = 'flex';
+      // Bind level buttons once per show
+      const btns = startOverlay.querySelectorAll('.level-btn');
+      btns.forEach(btn => {
+        btn.onclick = () => {
+          const v = parseInt(btn.getAttribute('data-level')||'0',10)||0;
+          levelIndex = Math.max(0, Math.min(v, LEVELS.length-1));
+          // reflect in dropdown
+          const sel = EL('#level-select'); if(sel) sel.value = String(levelIndex);
+          startOverlay.style.display = 'none';
+          startLevel();
+        };
+      });
+      if(startClose){
+        startClose.onclick = () => {
+          // If user closes without picking, use current dropdown selection or default 0
+          const sel = EL('#level-select');
+          if(sel){ levelIndex = Math.max(0, Math.min(parseInt(sel.value||'0',10)||0, LEVELS.length-1)); }
+          else { levelIndex = 0; }
+          startOverlay.style.display = 'none';
+          startLevel();
+        };
+      }
+    }catch(e){ startLevel(); }
   }
 
   function startLevel(){
@@ -1087,11 +1125,11 @@
     });
   }
 
-  // Start: load large word bank if available, then start level ONCE
+  // Start: load large word bank if available, then show start overlay
   (async function init(){
     try{ await loadWordBank(); }catch(e){}
     initPraiseQueue();
-    startLevel();
+    showStartOverlay();
   })();
 
   // --- Confetti ---

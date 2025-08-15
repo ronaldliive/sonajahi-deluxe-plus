@@ -30,6 +30,32 @@
       </div>
     </header>
 
+    <!-- Start overlay: force user to choose level -->
+    <section id="start-overlay" class="overlay" aria-modal="true" role="dialog" style="display:flex">
+      <div class="overlay-card">
+        <div class="overlay-hero" aria-hidden="true">🧩</div>
+        <h2 class="overlay-title big">Vali tase</h2>
+        <p class="overlay-text big">Alusta mängu sobiva raskusastmega.</p>
+        <div class="level-choices" role="group" aria-label="Vali tase">
+          <button class="level-btn ripple" data-level="0" type="button" aria-label="Algaja">
+            <div class="lvl-emoji">🌱</div>
+            <div class="lvl-text">Algaja</div>
+          </button>
+          <button class="level-btn ripple" data-level="1" type="button" aria-label="Edasijõudnu">
+            <div class="lvl-emoji">🧗</div>
+            <div class="lvl-text">Edasijõudnu</div>
+          </button>
+          <button class="level-btn ripple" data-level="2" type="button" aria-label="Ekspert">
+            <div class="lvl-emoji">🏆</div>
+            <div class="lvl-text">Ekspert</div>
+          </button>
+        </div>
+        <div class="overlay-actions">
+          <button id="start-overlay-close" class="btn btn-secondary" type="button">Sulge</button>
+        </div>
+      </div>
+    </section>
+
     <!-- Feedback & dots (progress bar removed) -->
     <div class="feedback" id="feedback" aria-live="polite">Vali õige pilt!</div>
     <div id="dots" class="dots" aria-hidden="true"></div>
