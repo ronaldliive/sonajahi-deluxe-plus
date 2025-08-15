@@ -184,7 +184,7 @@
       let all = [];
       for(const f of byLevel.algaja){ const j = await fetchJson(f); if(j && Array.isArray(j.words)) all = all.concat(mergeUpper(j.words)); }
       all = uniq(all);
-      pushLevel(0, all, w=> w.length <= 5);
+      pushLevel(0, all, w=> w.length <= 5 && !BEGINNER_BAN.has(w));
     }
     // Edasijõudnu (accept both keys)
     const adv = Array.isArray(byLevel.edasijoudnu)? byLevel.edasijoudnu : byLevel.edasijõudnu;
@@ -235,7 +235,7 @@
       LEVELS[intoLevel].push(...filtered);
     };
     // Level 0: Algaja – max 5 letters
-    addMany(L.algaja, 0, w => w.length <= 5);
+    addMany(L.algaja, 0, w => w.length <= 5 && !BEGINNER_BAN.has(w));
     // Level 1: Edasijõudnu – allow accents/common words
     addMany(L.edasijoudnu || L.edasijõudnu, 1);
     // Level 2: Ekspert – longer words ok
@@ -318,10 +318,18 @@
   }
   tasksTotal.textContent = sessionLen();
 
-  // Filter: Beginner level should only contain short words (<=5 letters)
+  // Beginner level (Algaja) blacklist: words unsuitable for 1st grade
+  const BEGINNER_BAN = new Set([
+    'PORRU','KÜBAR','KUBAR','KÜBARAD','KÜBARAS','PORRUD','PORRUL','PORRUS'
+  ]);
+
+  // Filter: Beginner level should only contain short words (<=5 letters) and exclude banned words
   try{
     if(Array.isArray(LEVELS[0])){
-      LEVELS[0] = LEVELS[0].filter(t => (t.word || '').length <= 5 && (t.word || '').toUpperCase() !== 'KIRVES');
+      LEVELS[0] = LEVELS[0].filter(t => {
+        const w = (t.word || '').toUpperCase();
+        return w.length <= 5 && w !== 'KIRVES' && !BEGINNER_BAN.has(w);
+      });
     }
   }catch(e){ /* ignore */ }
 
