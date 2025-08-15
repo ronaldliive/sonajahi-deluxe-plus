@@ -516,7 +516,7 @@
     ['KAPP','🗄️'],['KOHVER','🧳'],['KÄÄRID','✂️'],['KLEEBIS','🏷️'],
     ['TELEFON','📱'],['TELEKA','📺'],['ARVUTI','💻'],['MÄNGUKONSOOL','🎮'],
     ['KIRJUTUSLAUD','🖊️'],['PLAIIATS','✏️'],['KUMM','🧽'],['LIIM','🧴'],
-    ['KELL','⏰'],['KAARDID','🃏'],['MÄNG','🎲'],['ÕHUPALL','🎈'],
+    ['KELL','⏰'],['KAARDID','🃏'],['TÄRING','🎲'],['ÕHUPALL','🎈'],
     ['RAHA','💰'],['VÕTI','🔑'],['LUKK','🔒'],['ELEKTER','⚡'],['PÕLEMA','🔥'],
     ['KROON','👑'],['MEDAL','🏅'],['KARIKAS','🏆'],
     ['PÄEV','📅'],['KAART','🗺️'],['KIRI','✉️'],['PAKK','📦']
