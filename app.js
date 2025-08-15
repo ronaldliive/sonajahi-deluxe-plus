@@ -259,6 +259,7 @@
   const btnSkip = EL('#btn-skip');
   const btnNew = EL('#btn-new');
   const btnSay = EL('#btn-say');
+  const appVersionEl = EL('#app-version');
   // Answer overlay elements
   const ansOverlay = EL('#answer-overlay');
   const ansEmoji = EL('#answer-emoji');
@@ -272,6 +273,30 @@
   // Welcome overlay removed earlier, now replaced by explicit start overlay
   const isIOS = /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   let audioUnlocked = false;
+
+  // --- Footer version/time (auto from sw.js + last modified) ---
+  async function initVersionFooter(){
+    try{
+      if(!appVersionEl) return;
+      let ver = '';
+      try{
+        const res = await fetch('./sw.js', { cache: 'no-store' });
+        if(res.ok){
+          const txt = await res.text();
+          const m = txt.match(/CACHE_NAME\s*=\s*['\"][^'\"]*-(v\d+)['\"]/i);
+          if(m && m[1]) ver = m[1];
+        }
+      }catch{/* noop */}
+      if(!ver) ver = 'v?';
+      const dt = new Date(document.lastModified);
+      const fmt = new Intl.DateTimeFormat('et-EE', {
+        year:'numeric', month:'2-digit', day:'2-digit',
+        hour:'2-digit', minute:'2-digit'
+      });
+      const when = isNaN(dt.getTime()) ? '' : fmt.format(dt);
+      appVersionEl.textContent = when ? `${ver} • ${when}` : ver;
+    }catch{/* ignore */}
+  }
 
   function sessionLen(){
     const total = currentOrder.length || LEVELS[levelIndex].length;
@@ -1129,6 +1154,7 @@
   (async function init(){
     try{ await loadWordBank(); }catch(e){}
     initPraiseQueue();
+    initVersionFooter();
     showStartOverlay();
   })();
 
