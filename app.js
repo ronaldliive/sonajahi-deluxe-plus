@@ -299,8 +299,8 @@
   }
 
   function sessionLen(){
-    const total = currentOrder.length || LEVELS[levelIndex].length;
-    return Math.min(10, total);
+    // Always target 10 items per level session
+    return 10;
   }
   tasksTotal.textContent = sessionLen();
 
@@ -561,7 +561,7 @@
 
   function renderTask(){
     // If finished all tasks in the current level, handle level completion
-    if(taskIndex >= currentOrder.length){
+    if(taskIndex >= sessionLen()){
       finishLevel();
       return;
     }
@@ -575,17 +575,17 @@
     const phase = roundCounter % 3; // 0: word->emoji, 1: emoji->word, 2: word->word
     if(phase === 0){
       currentRoundType = 'word_to_emoji';
-      // If this task's correct emoji equals banned one, skip forward to keep the game from being trivial
-      let guard=0; let built=[]; let localT=t;
-      while(guard<6){
-        const testBuilt = buildChoicesForTask(localT, banNextEmoji);
-        if(testBuilt && testBuilt.length){ built = testBuilt; break; }
-        taskIndex++;
-        if(taskIndex >= currentOrder.length){ finishLevel(); return; }
-        localT = pickTask(); currentTask = localT;
-        guard++;
+      // Find a suitable task without consuming taskIndex; swap in place if needed
+      let built=[]; let localT=t;
+      const swapped0 = findAndSwapValidEmojiTask(banNextEmoji);
+      if(swapped0){ localT = swapped0; currentTask = localT; }
+      built = (buildChoicesForTask(localT, banNextEmoji) || []).filter(e=> e && typeof e === 'string');
+      if(!built.length){
+        // No valid emoji choices -> move to next phase without consuming a task
+        roundCounter++;
+        renderTask();
+        return;
       }
-      if(!built.length){ built = []; }
       // mark actually shown word as seen
       if(localT && localT.word){ seenWords.add((localT.word||'').toUpperCase()); }
       // Show the word (letters) and ask to pick correct emoji (using localT)
@@ -616,8 +616,9 @@
         const swapped = findAndSwapValidEmojiTask(banNextEmoji);
         if(swapped){ t = swapped; currentTask = t; emoji = canonicalEmojiForWord(t.word, null); }
       }
-      if(!emoji || emoji==='❓'){ // no valid emoji -> skip to next
+      if(!emoji || emoji==='❓'){ // no valid emoji -> skip to next phase without consuming a task
         roundCounter++;
+        renderTask();
         return;
       }
       // mark actually shown word as seen
@@ -635,16 +636,19 @@
     } else { // phase === 2
       currentRoundType = 'word_to_word';
       resumeFloaters();
-      // Ensure we have a valid task with a word
-      let guard = 0;
-      while(guard < 6 && (!t || !t.word)){
-        taskIndex++;
-        if(taskIndex >= currentOrder.length){ finishLevel(); return; }
-        t = pickTask();
-        currentTask = t;
-        guard++;
+      // Ensure we have a valid task with a word without consuming taskIndex
+      if(!t || !t.word){
+        const levelTasks = LEVELS[levelIndex] || [];
+        for(let i = taskIndex; i < currentOrder.length; i++){
+          const idx = currentOrder[i];
+          const cand = levelTasks[idx];
+          if(cand && cand.word){
+            if(i !== taskIndex){ const tmp = currentOrder[taskIndex]; currentOrder[taskIndex] = currentOrder[i]; currentOrder[i] = tmp; }
+            t = cand; currentTask = t; break;
+          }
+        }
       }
-      if(!t || !t.word){ taskIndex++; roundCounter++; return; }
+      if(!t || !t.word){ roundCounter++; renderTask(); return; }
       // mark shown word as seen
       seenWords.add((t.word||'').toUpperCase());
       // show the word as letters
@@ -1029,6 +1033,8 @@
     taskIndex = 0; correct = 0; wrong = 0; coins = 0; stickers = 0; results = []; roundCounter = 0;
     // reset emoji repetition tracker per level start
     seenEmojis.clear();
+    // allow full pool each level: do not carry words across levels
+    seenWords.clear();
     // Build a no-repeat order for the entire level (supports very large pools)
     const levelArr = LEVELS[levelIndex];
     // Build unique-by-word index list to avoid duplicates from large pools
@@ -1041,16 +1047,33 @@
         seenLocal.add(o.w);
         return true;
       });
-    const eligibleIdx = uniqueIdx
-      .filter(o => !seenWords.has(o.w))
-      .map(o => o.i);
-    const baseIdx = eligibleIdx.length ? eligibleIdx : levelArr.map((_,i)=>i);
+    let baseIdx = uniqueIdx.map(o => o.i);
+    if(!baseIdx.length) baseIdx = levelArr.map((_,i)=>i);
+    // Seed order
     currentOrder = shuffleArray(baseIdx.slice());
-    // Rotate by a random offset so the first words vary between sessions
+    // Rotate for variety
     if(currentOrder.length > 1){
       const offset = Math.floor(rng() * currentOrder.length);
       if(offset){ currentOrder = currentOrder.slice(offset).concat(currentOrder.slice(0, offset)); }
     }
+    // Ensure at least 10 items by cycling through baseIdx (avoid immediate duplicates)
+    if(currentOrder.length < sessionLen() && baseIdx.length){
+      let i = 0;
+      const need = sessionLen() - currentOrder.length;
+      const shuffled = shuffleArray(baseIdx.slice());
+      while(currentOrder.length < sessionLen()){
+        const pick = shuffled[i % shuffled.length];
+        const lastIdx = currentOrder[currentOrder.length - 1];
+        if(pick !== lastIdx){ currentOrder.push(pick); }
+        i++;
+        // guard in case baseIdx has length 1
+        if(i > 100 && currentOrder.length < sessionLen()){
+          currentOrder.push(pick);
+        }
+      }
+    }
+    // Cap to exactly 10 for this session
+    if(currentOrder.length > sessionLen()) currentOrder = currentOrder.slice(0, sessionLen());
     tasksTotal.textContent = sessionLen();
     // reflect current level in dropdown if present
     const sel = EL('#level-select');
