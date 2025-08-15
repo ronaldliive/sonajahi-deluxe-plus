@@ -203,8 +203,22 @@
     }
   }
 
+  // Normalize words loaded from banks; apply manual corrections for known bad forms
+  function normalizeWord(w){
+    const s = String(w||'').trim().toUpperCase();
+    if(!s) return '';
+    // Manual corrections for reported issues
+    const CORR = new Map([
+      ['PAKIK','PAKK'],
+      ['TUALETT','TUALETT'], // ensure consistent diacritics
+      ['TELEKA','TELEKAS'], // example correction if encountered
+      ['KIRJ','KIRJUTUSLAUD']
+    ]);
+    return CORR.get(s) || s;
+  }
+
   function toTask(w){
-    const word = (w||'').toUpperCase();
+    const word = normalizeWord(w);
     if(!word) return null;
     const emo = canonicalEmojiForWord(word, null);
     // Include all words; emoji is optional and only used for emoji rounds
@@ -511,10 +525,10 @@
     ['MAJA','🏠'],['KOOL','🏫'],['POOD','🏬'],['KLOSS','🧱'],
     ['PÄIKE','☀️'],['KUU','🌙'],['TÄHT','⭐'],['LUMI','❄️'],['VIHM','🌧️'],['TORM','⛈️'],['TUUL','🌬️'],['VIKERKAAR','🌈'],
     ['LILL','🌸'],['PUU','🌳'],['LEHT','🍃'],['KAKTUS','🌵'],
-    ['UKS','🚪'],['AKEN','🪟'],['VOODI','🛏️'],['TOOL','🪑'],['DIIVAN','🛋️'],['VANN','🛁'],['DUŠŠ','🚿'],['TUALett','🚽'],
+    ['UKS','🚪'],['AKEN','🪟'],['VOODI','🛏️'],['TOOL','🪑'],['DIIVAN','🛋️'],['VANN','🛁'],['DUŠŠ','🚿'],['TUALETT','🚽'],
     ['NUGA','🔪'],['KAHVEL','🍴'],['LUSIKAS','🥄'],['PANN','🍳'],
     ['KAPP','🗄️'],['KOHVER','🧳'],['KÄÄRID','✂️'],['KLEEBIS','🏷️'],
-    ['TELEFON','📱'],['TELEKA','📺'],['ARVUTI','💻'],['MÄNGUKONSOOL','🎮'],
+    ['TELEFON','📱'],['TELEKA','📺'],['TELEKAS','📺'],['ARVUTI','💻'],['MÄNGUKONSOOL','🎮'],
     ['KIRJUTUSLAUD','🖊️'],['PLAIIATS','✏️'],['KUMM','🧽'],['LIIM','🧴'],
     ['KELL','⏰'],['KAARDID','🃏'],['TÄRING','🎲'],['ÕHUPALL','🎈'],
     ['RAHA','💰'],['VÕTI','🔑'],['LUKK','🔒'],['ELEKTER','⚡'],['PÕLEMA','🔥'],
@@ -758,12 +772,18 @@
   }
 
   function buildWordChoicesForTask(t){
-    const correct = (t && t.word ? String(t.word) : '').toUpperCase();
+    const correct = normalizeWord(t && t.word ? t.word : '');
     if(!correct) return [];
     const levelTasks = LEVELS[levelIndex] || [];
-    // Unique pool excluding the correct word
+    // Define a safe set: words that have a canonical emoji OR are in a curated list
+    const SAFE_LIST = ['KASS','KOER','MAJA','AUTO','KALA','LIND','PÄIKE','PUU','PAKK','KOOK','ÕUN','PIRN','LILL','KUU','TÄHT','BUSS','RONG','LAEV','PALL','MUNA','LEHM','SAI'];
+    const SAFE_SET = new Set(SAFE_LIST);
+    const hasEmoji = (w)=> WORD_EMOJI.has(w);
+    // Unique normalized pool, excluding the correct word, restricted to safe entries
     const pool = Array.from(new Set(
-      levelTasks.map(x => (x.word||'').toUpperCase()).filter(w => w && w !== correct)
+      levelTasks
+        .map(x => normalizeWord(x && x.word))
+        .filter(w => w && w !== correct && (hasEmoji(w) || SAFE_SET.has(w)))
     ));
     const distractors = [];
     // Prefer random unique distractors from pool
@@ -773,7 +793,7 @@
       if(w && !distractors.includes(w)) distractors.push(w);
     }
     // If pool was too small, fallback to a safe common list
-    const FALLBACK = ['KASS','KOER','MAJA','AUTO','KALA','LIND','PÄIKE','PUU'];
+    const FALLBACK = ['KASS','KOER','MAJA','AUTO','KALA','LIND','PÄIKE','PUU','PAKK'];
     const BAN = new Set(['SÕDA','SODA','POMM','BOMM','RELV','PÜSS','SURM','VERI','TANK','SÕJAVÄGI','SOJAVAGI','JUUS']);
     while(distractors.length < 2){
       const w = FALLBACK[Math.floor(Math.random()*FALLBACK.length)];
@@ -909,9 +929,9 @@
 
     // Determine correct word for TTS in overlay
     const correctWord = (function(){
-      if(currentRoundType === 'word_to_emoji') return lastWordShown;
-      if(currentTask && currentTask.word) return (currentTask.word||'').toUpperCase();
-      return lastWordShown || currentWord();
+      if(currentRoundType === 'word_to_emoji') return normalizeWord(lastWordShown);
+      if(currentTask && currentTask.word) return normalizeWord(currentTask.word);
+      return normalizeWord(lastWordShown || currentWord());
     })();
 
     // Show per-answer overlay with counter (X / 10) and wait for tap
