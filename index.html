@@ -33,7 +33,10 @@
     <!-- Start overlay: force user to choose level -->
     <section id="start-overlay" class="overlay" aria-modal="true" role="dialog" style="display:flex">
       <div class="overlay-card">
-        <div class="overlay-hero" aria-hidden="true">🧩</div>
+        <div class="brand">
+          <div class="brand-logo" aria-hidden="true">🧩</div>
+          <div class="brand-title">Sõnajaht</div>
+        </div>
         <h2 class="overlay-title big">Vali tase</h2>
         <p class="overlay-text big">Alusta mängu sobiva raskusastmega.</p>
         <div class="level-choices" role="group" aria-label="Vali tase">
@@ -49,9 +52,6 @@
             <div class="lvl-emoji">🏆</div>
             <div class="lvl-text">Ekspert</div>
           </button>
-        </div>
-        <div class="overlay-actions">
-          <button id="start-overlay-close" class="btn btn-secondary" type="button">Sulge</button>
         </div>
       </div>
     </section>
@@ -126,6 +126,7 @@
         <button class="btn btn-secondary" id="btn-say" type="button" aria-label="Kuula">Kuula</button>
         <button class="btn btn-primary" id="btn-new" type="button">Uus mäng</button>
       </div>
+      <div class="version" id="app-version" aria-label="Versioon">v22</div>
     </footer>
   </main>
 
