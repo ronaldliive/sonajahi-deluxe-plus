@@ -114,6 +114,25 @@
       return u[0] / 2**32;
     }catch{ return Math.random(); }
   }
+
+  // Find a later task with a valid emoji mapping for emoji->word phase and swap it in
+  function findAndSwapValidEmojiTask(ban){
+    const levelTasks = LEVELS[levelIndex] || [];
+    for(let i = taskIndex; i < currentOrder.length; i++){
+      const idx = currentOrder[i];
+      const cand = levelTasks[idx];
+      const emo = canonicalEmojiForWord(cand && cand.word, null);
+      if(emo && emo !== '❓' && !seenEmojis.has(emo) && (!ban || emo !== ban)){
+        if(i !== taskIndex){
+          const tmp = currentOrder[taskIndex];
+          currentOrder[taskIndex] = currentOrder[i];
+          currentOrder[i] = tmp;
+        }
+        return cand;
+      }
+    }
+    return null;
+  }
   function shuffleArray(arr){
     for(let i = arr.length - 1; i > 0; i--){
       const j = Math.floor(rng() * (i + 1));
@@ -562,18 +581,13 @@
       currentRoundType = 'emoji_to_word';
       pauseFloaters();
       // Word-choice round: show the emoji (must exist), pick the correct WORD.
-      // Find the next suitable task with a valid, unseen, and not-banned emoji without breaking alternation
-      let attempts = 0; let emoji = canonicalEmojiForWord(t.word, null);
-      while(attempts < 12 && (!emoji || emoji === '❓' || seenEmojis.has(emoji) || (banNextEmoji && emoji === banNextEmoji))){
-        taskIndex++;
-        if(taskIndex >= currentOrder.length){ finishLevel(); return; }
-        t = pickTask();
-        currentTask = t;
-        emoji = canonicalEmojiForWord(t.word, null);
-        attempts++;
+      // Swap in a later suitable task with a valid, unseen, and not-banned emoji (do NOT consume taskIndex)
+      let emoji = canonicalEmojiForWord(t.word, null);
+      if(!emoji || emoji === '❓' || seenEmojis.has(emoji) || (banNextEmoji && emoji === banNextEmoji)){
+        const swapped = findAndSwapValidEmojiTask(banNextEmoji);
+        if(swapped){ t = swapped; currentTask = t; emoji = canonicalEmojiForWord(t.word, null); }
       }
       if(!emoji || emoji==='❓'){ // no valid emoji -> skip to next
-        taskIndex++;
         roundCounter++;
         return;
       }
@@ -676,10 +690,10 @@
       try{ built = buildChoicesForTask(t, banNextEmoji) || []; }catch{ built = []; }
     }
     if(!built.length && Array.isArray(t.emojis)) built = t.emojis.slice(0,3).filter(Boolean);
-    // validate
+    // validate — if invalid, do not consume a turn; just bail to let caller pick another phase/word
     if(!built || built.length < 3 || built.some(x => !x)){
-      // skip this task safely
-      taskIndex++;
+      // Let renderTask() pick a different item for this phase without moving taskIndex
+      // Move to next phase to avoid getting stuck
       roundCounter++;
       renderTask();
       return;
@@ -731,16 +745,45 @@
     return [correct, ...distractors];
   }
 
+  // Try to locate a later task in currentOrder that can produce valid 3-word choices
+  function findAndSwapValidWordTask(){
+    const levelTasks = LEVELS[levelIndex] || [];
+    for(let i = taskIndex; i < currentOrder.length; i++){
+      const idx = currentOrder[i];
+      const cand = levelTasks[idx];
+      try{
+        const built = buildWordChoicesForTask(cand) || [];
+        if(built.length === 3 && built.every(Boolean)){
+          if(i !== taskIndex){
+            const tmp = currentOrder[taskIndex];
+            currentOrder[taskIndex] = currentOrder[i];
+            currentOrder[i] = tmp;
+          }
+          return cand;
+        }
+      }catch{}
+    }
+    return null;
+  }
+
   function renderChoicesWords(t){
     choices.innerHTML = '';
     let built = [];
     try{ built = buildWordChoicesForTask(t) || []; }catch{ built = []; }
-    // validate
+    // validate; if invalid, try to swap in a later valid task without consuming a turn
     if(!built || built.length < 3 || built.some(x => !x)){
-      taskIndex++;
-      roundCounter++;
-      renderTask();
-      return;
+      const swapped = findAndSwapValidWordTask();
+      if(swapped){
+        // Re-render with the swapped-in task
+        renderChoicesWords(swapped);
+        return;
+      }
+      // As a last resort, construct a safe fallback using the word itself + fallback pool
+      const correct = (t && t.word ? String(t.word) : '').toUpperCase();
+      const FALLBACK = ['KASS','KOER','MAJA','AUTO','KALA','LIND','PÄIKE','PUU'];
+      const alt = [];
+      for(const w of FALLBACK){ if(w !== correct && !alt.includes(w)) alt.push(w); if(alt.length===2) break; }
+      built = [correct, ...alt];
     }
     const order = [0,1,2].sort(()=> Math.random() - 0.5);
     const correctIndex = order.indexOf(0);
