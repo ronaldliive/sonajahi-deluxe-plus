@@ -675,7 +675,15 @@
     if(!built.length){
       try{ built = buildChoicesForTask(t, banNextEmoji) || []; }catch{ built = []; }
     }
-    if(!built.length && Array.isArray(t.emojis)) built = t.emojis.slice(0,3);
+    if(!built.length && Array.isArray(t.emojis)) built = t.emojis.slice(0,3).filter(Boolean);
+    // validate
+    if(!built || built.length < 3 || built.some(x => !x)){
+      // skip this task safely
+      taskIndex++;
+      roundCounter++;
+      renderTask();
+      return;
+    }
     const order = [0,1,2].sort(()=> Math.random() - 0.5);
     const correctIndex = order.indexOf(0); // correct is at index 0 in built
     const created = [];
@@ -699,7 +707,8 @@
   }
 
   function buildWordChoicesForTask(t){
-    const correct = (t.word||'').toUpperCase();
+    const correct = (t && t.word ? String(t.word) : '').toUpperCase();
+    if(!correct) return [];
     const levelTasks = LEVELS[levelIndex] || [];
     // Unique pool excluding the correct word
     const pool = Array.from(new Set(
@@ -714,9 +723,10 @@
     }
     // If pool was too small, fallback to a safe common list
     const FALLBACK = ['KASS','KOER','MAJA','AUTO','KALA','LIND','PÄIKE','PUU'];
+    const BAN = new Set(['SÕDA','SODA','POMM','BOMM','RELV','PÜSS','SURM','VERI','TANK','SÕJAVÄGI','SOJAVAGI','JUUS']);
     while(distractors.length < 2){
       const w = FALLBACK[Math.floor(Math.random()*FALLBACK.length)];
-      if(w !== correct && !distractors.includes(w)) distractors.push(w);
+      if(w !== correct && !distractors.includes(w) && !BAN.has(w)) distractors.push(w);
     }
     return [correct, ...distractors];
   }
@@ -725,6 +735,13 @@
     choices.innerHTML = '';
     let built = [];
     try{ built = buildWordChoicesForTask(t) || []; }catch{ built = []; }
+    // validate
+    if(!built || built.length < 3 || built.some(x => !x)){
+      taskIndex++;
+      roundCounter++;
+      renderTask();
+      return;
+    }
     const order = [0,1,2].sort(()=> Math.random() - 0.5);
     const correctIndex = order.indexOf(0);
     const created = [];
