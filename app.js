@@ -119,18 +119,41 @@
   // If allowReuse=true, we ignore the seenEmojis restriction to avoid starving emoji phases
   function findAndSwapValidEmojiTask(ban, allowReuse=false){
     const levelTasks = LEVELS[levelIndex] || [];
-    for(let i = taskIndex; i < currentOrder.length; i++){
+    const n = currentOrder.length;
+    if(!n) return null;
+    // Pass 1: scan forward from current position
+    for(let i = taskIndex; i < n; i++){
       const idx = currentOrder[i];
       const cand = levelTasks[idx];
       const emo = canonicalEmojiForWord(cand && cand.word, null);
-      const alreadySeen = seenEmojis.has(emo);
+      const alreadySeen = emo ? seenEmojis.has(emo) : false;
       if(emo && emo !== '❓' && (!alreadySeen || allowReuse) && (!ban || emo !== ban)){
         if(i !== taskIndex){
-          const tmp = currentOrder[taskIndex];
-          currentOrder[taskIndex] = currentOrder[i];
-          currentOrder[i] = tmp;
+          const tmp = currentOrder[taskIndex]; currentOrder[taskIndex] = currentOrder[i]; currentOrder[i] = tmp;
         }
         return cand;
+      }
+    }
+    // Pass 2: wrap-around scan from start up to current position
+    for(let i = 0; i < taskIndex; i++){
+      const idx = currentOrder[i];
+      const cand = levelTasks[idx];
+      const emo = canonicalEmojiForWord(cand && cand.word, null);
+      const alreadySeen = emo ? seenEmojis.has(emo) : false;
+      if(emo && emo !== '❓' && (!alreadySeen || allowReuse) && (!ban || emo !== ban)){
+        if(i !== taskIndex){
+          const tmp = currentOrder[taskIndex]; currentOrder[taskIndex] = currentOrder[i]; currentOrder[i] = tmp;
+        }
+        return cand;
+      }
+    }
+    // Pass 3: as a last resort, search the entire levelTasks for any word with a valid emoji
+    for(let i = 0; i < levelTasks.length; i++){
+      const cand = levelTasks[i];
+      const emo = canonicalEmojiForWord(cand && cand.word, null);
+      const alreadySeen = emo ? seenEmojis.has(emo) : false;
+      if(emo && emo !== '❓' && (!alreadySeen || allowReuse) && (!ban || emo !== ban)){
+        return cand; // do not swap currentOrder; just use this candidate for this phase
       }
     }
     return null;

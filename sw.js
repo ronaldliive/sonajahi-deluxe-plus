@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sonajahi-cache-v22';
+const CACHE_NAME = 'sonajahi-cache-v23';
 const ASSETS = [
   './',
   './index.html',
@@ -35,6 +35,11 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
+  // Skip non-http(s) schemes (e.g., chrome-extension) to avoid Cache API errors
+  try{
+    const url = new URL(req.url);
+    if(url.protocol !== 'http:' && url.protocol !== 'https:') return;
+  }catch{ return; }
 
   // Network-first for HTML navigations to avoid stale index.html
   const isHTML = req.mode === 'navigate' || (req.headers.get('accept')||'').includes('text/html');
@@ -42,8 +47,10 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(
       fetch(req)
         .then(res => {
-          const copy = res.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
+          try{
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(req, copy)).catch(()=>{});
+          }catch{}
           return res;
         })
         .catch(() => caches.match(req))
@@ -56,8 +63,10 @@ self.addEventListener('fetch', (e) => {
     caches.match(req).then(cached => {
       const fetchPromise = fetch(req).then(res => {
         if (res && res.status === 200 && (res.type === 'basic' || res.type === 'cors')) {
-          const copy = res.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
+          try{
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(req, copy)).catch(()=>{});
+          }catch{}
         }
         return res;
       }).catch(() => cached);
