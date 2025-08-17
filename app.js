@@ -230,13 +230,25 @@
 
   // Normalize words loaded from banks; apply manual corrections for known bad forms
   function normalizeWord(w){
-    const s = String(w||'').trim().toUpperCase();
+    const s = String(w||'').replace(/\s+/g,'').trim().toUpperCase();
     if(!s) return '';
     // Manual corrections for reported issues
     const CORR = new Map([
+      // Common declensions/typos seen in beginner lists
+      ['HANU','HANI'],
+      ['UKSE','UKS'],
+      ['LUME','LUMI'],
+      ['LUND','LUMI'],
+      ['PARDI','PART'],
+      ['SUSI','HUNT'],
+      ['HOBU','KITS'],
+      ['ZEEBRA','SEEBRA'],
+      ['ISSA','ISA'],
+      ['EMME','EMA'],
+      // Misc corrections
       ['PAKIK','PAKK'],
       ['TUALETT','TUALETT'], // ensure consistent diacritics
-      ['TELEKA','TELEKAS'], // example correction if encountered
+      ['TELEKA','TELEKAS'],
       ['KIRJ','KIRJUTUSLAUD']
     ]);
     return CORR.get(s) || s;
