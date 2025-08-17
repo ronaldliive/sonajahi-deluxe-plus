@@ -21,13 +21,8 @@
       <div class="appbar-left">
         <h1 class="title">Sõnajaht</h1>
       </div>
-      <div class="appbar-right">
-        <div class="pill" id="pill-tasks">🧩 <span id="tasks-count">0</span>/<span id="tasks-total">10</span></div>
-        <div class="pill good" id="pill-correct">✅ <span id="correct-count">0</span></div>
-        <div class="pill bad" id="pill-wrong">❌ <span id="wrong-count">0</span></div>
-        <div class="pill" id="pill-coins">🪙 <span id="coin-count">0</span></div>
-        <div class="pill" id="pill-stickers">🏷️ <span id="sticker-count">0</span></div>
-      </div>
+      <!-- Hide counters for clarity -->
+      <div class="appbar-right" style="display:none"></div>
     </header>
 
     <!-- Start overlay: force user to choose level -->
@@ -56,21 +51,10 @@
       </div>
     </section>
 
-    <!-- Feedback & dots (progress bar removed) -->
+    <!-- Feedback (progress dots removed) -->
     <div class="feedback" id="feedback" aria-live="polite">Vali õige pilt!</div>
-    <div id="dots" class="dots" aria-hidden="true"></div>
 
-    <!-- Inline level selection replaced with a natural dropdown to avoid confusion with answer emojis -->
-    <section class="content controls-content">
-      <div class="ctrl" aria-label="Vali tase">
-        <label for="level-select" class="tiny" style="min-width:64px">Tase</label>
-        <select id="level-select">
-          <option value="0" selected>Algaja</option>
-          <option value="1">Edasijõudnu</option>
-          <option value="2">Ekspert</option>
-        </select>
-      </div>
-    </section>
+    <!-- In-game level selector removed; level chosen on start overlay -->
 
     <!-- Game over overlay -->
     <section id="gameover" class="overlay" aria-modal="true" role="dialog" style="display:none">
@@ -103,7 +87,7 @@
         <div class="answer-word" id="answer-word" aria-live="polite">SÕNA</div>
         <h2 class="overlay-title" id="answer-title">Tubli!</h2>
         <p class="overlay-text tiny" id="answer-sub">Õige vastus</p>
-        <p class="overlay-text tiny" id="answer-correct-text" style="display:none"></p>
+        <!-- Removed redundant correct-text line -->
         <div class="counter" id="answer-counter">1 / 10</div>
         <div class="overlay-actions" style="margin-top:14px">
           <button id="answer-next" class="btn btn-primary" type="button">JÄTKA</button>

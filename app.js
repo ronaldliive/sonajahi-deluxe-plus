@@ -318,11 +318,11 @@
     // Always target 10 items per level session
     return 10;
   }
-  tasksTotal.textContent = sessionLen();
+  if(tasksTotal) tasksTotal.textContent = sessionLen();
 
   // Beginner level (Algaja) blacklist: words unsuitable for 1st grade
   const BEGINNER_BAN = new Set([
-    'PORRU','KÜBAR','KUBAR','KÜBARAD','KÜBARAS','PORRUD','PORRUL','PORRUS'
+    'PORRU','KÜBAR','KUBAR','KÜBARAD','KÜBARAS','PORRUD','PORRUL','PORRUS','TEEL'
   ]);
 
   // Filter: Beginner level should only contain short words (<=5 letters) and exclude banned words
@@ -886,11 +886,11 @@
   }
 
   function renderHUD(){
-    tasksCount.textContent = taskIndex;
-    correctCount.textContent = correct;
+    if(tasksCount) tasksCount.textContent = taskIndex;
+    if(correctCount) correctCount.textContent = correct;
     if(wrongCount) wrongCount.textContent = wrong;
-    coinCount.textContent = coins;
-    stickerCount.textContent = stickers;
+    if(coinCount) coinCount.textContent = coins;
+    if(stickerCount) stickerCount.textContent = stickers;
     // progress removed
     if(feedback){
       feedback.className = 'feedback';
@@ -1114,7 +1114,7 @@
     }
     // Cap to exactly 10 for this session
     if(currentOrder.length > sessionLen()) currentOrder = currentOrder.slice(0, sessionLen());
-    tasksTotal.textContent = sessionLen();
+    if(tasksTotal) tasksTotal.textContent = sessionLen();
     // reflect current level in dropdown if present
     const sel = EL('#level-select');
     if(sel){ sel.value = String(levelIndex); }
@@ -1146,7 +1146,7 @@
   // Events
   // Add ripple to static buttons
   document.querySelectorAll('.btn').forEach(b=> b.classList.add('ripple'));
-  btnSkip.addEventListener('click', ()=>{ results.push(null); taskIndex++; renderTask(); });
+  btnSkip.addEventListener('click', ()=>{ results.push(null); taskIndex++; roundCounter++; renderTask(); });
   btnNew.addEventListener('click', resetSession);
   // Welcome/TTS greeting removed – start immediately
   // Level selection via dropdown
